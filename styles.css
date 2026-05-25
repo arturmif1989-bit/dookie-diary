@@ -237,10 +237,10 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .modal-content input,
 .modal-content textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
 }
 
@@ -411,7 +411,37 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 }
 
 @media (max-width: 600px) {
-  .logo { font-size: 15px; }
-  .nav-btn { font-size: 12px; padding: 5px 8px; }
-  header { padding: 8px 10px; }
+  .logo { font-size: 16px; }
+  nav { gap: 6px; }
+  .nav-btn { font-size: 13px; padding: 8px 10px; }
+  header { padding: 10px; }
+
+  .auth-box { padding: 32px 22px; }
+  .container { padding: 16px; }
+
+  /* Модалки выезжают снизу как «шторка» */
+  .modal { align-items: flex-end; padding: 0; }
+  .modal-content {
+    max-width: none;
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    max-height: 88vh;
+    padding: 22px 18px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  /* Кнопки действий — во всю ширину, удобно пальцу */
+  .modal-actions { gap: 10px; }
+  .modal-actions button { flex: 1; padding: 14px; font-size: 16px; }
+
+  /* Чипы процесса крупнее для тапа */
+  .process-chips .chip { padding: 10px 14px; font-size: 15px; }
+
+  /* FAB выше с учётом домашней полоски iPhone */
+  .fab {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    right: 18px;
+  }
+
+  /* Тост не залезает под полоску */
+  .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
 }
