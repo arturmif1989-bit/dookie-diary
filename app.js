@@ -499,5 +499,19 @@ async function renderStats(myPoopsArg) {
   `;
 }
 
+// === ПОДПИСЬ (Borat) ===
+const BORAT_LINES = [
+  'Very nice! Great success! 👍',
+  'Wa wa wee wa! 😲',
+  'High five! ✋',
+  'My wife! 👰',
+  'Is nice, I like! 😎',
+  'Niiice 🤙',
+];
+(function setBoratLine() {
+  const el = $('borat-line');
+  if (el) el.textContent = BORAT_LINES[Math.floor(Math.random() * BORAT_LINES.length)];
+})();
+
 // === START ===
 checkAuth();
