@@ -167,6 +167,12 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 
 #map { width: 100%; height: 100%; }
 
+#map.adding,
+#map.adding .leaflet-grab,
+#map.adding .leaflet-interactive {
+  cursor: crosshair !important;
+}
+
 .container {
   max-width: 700px;
   margin: 0 auto;

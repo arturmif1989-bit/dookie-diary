@@ -11,6 +11,7 @@ let markers = [];
 let pendingLatLng = null;
 let selectedRating = 0;
 let editingPoopId = null;
+let addingMode = false;
 
 // === HELPERS ===
 function $(id) { return document.getElementById(id); }
@@ -112,46 +113,47 @@ async function enterApp() {
 function initMap() {
   if (map) return;
 
-  map = L.map('map').setView([52.3676, 4.9041], 4); // дефолт - Амстердам, мир
+  map = L.map('map').setView([55.7558, 37.6173], 11); // дефолт — Москва
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
-    maxZoom: 19
+    maxZoom: 19,
+    detectRetina: true
   }).addTo(map);
 
-  // Попробуем получить геолокацию пользователя
+  // Клик по карте в режиме добавления — ставим точную метку
+  map.on('click', (e) => {
+    if (!addingMode) return;
+    pendingLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
+    setAddingMode(false);
+    openAddModal();
+  });
+
+  // Попробуем получить геолокацию пользователя — крупный план улиц
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+        map.setView([pos.coords.latitude, pos.coords.longitude], 16);
       },
       () => { /* отказано - оставляем дефолт */ }
     );
   }
 }
 
+function setAddingMode(on) {
+  addingMode = on;
+  const c = $('map');
+  if (c) c.classList.toggle('adding', on);
+}
+
 $('add-poop-btn').addEventListener('click', () => {
-  if (navigator.geolocation) {
-    toast('Получаю текущее местоположение...');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        pendingLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        openAddModal();
-      },
-      () => {
-        // Если геолокация недоступна — используем центр карты
-        const c = map.getCenter();
-        pendingLatLng = { lat: c.lat, lng: c.lng };
-        openAddModal();
-        toast('Геолокация недоступна, использую центр карты', 'error');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  } else {
-    const c = map.getCenter();
-    pendingLatLng = { lat: c.lat, lng: c.lng };
-    openAddModal();
+  if (addingMode) {
+    setAddingMode(false);
+    toast('Отменено');
+    return;
   }
+  setAddingMode(true);
+  toast('Нажми на карту, где поставить метку 💩');
 });
 
 function openAddModal() {
@@ -501,12 +503,12 @@ async function renderStats(myPoopsArg) {
 
 // === ПОДПИСЬ (Borat) ===
 const BORAT_LINES = [
-  'Very nice! Great success! 👍',
-  'Wa wa wee wa! 😲',
-  'High five! ✋',
-  'My wife! 👰',
-  'Is nice, I like! 😎',
-  'Niiice 🤙',
+  'Очень мило! Большой успех! 👍',
+  'Ва-ва-ви-ва! 😲',
+  'Дай пять! ✋',
+  'Моя жена! 👰',
+  'Мне очень нравится! 😎',
+  'Чёткенько 🤙',
 ];
 (function setBoratLine() {
   const el = $('borat-line');
