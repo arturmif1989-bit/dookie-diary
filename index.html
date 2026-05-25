@@ -91,13 +91,16 @@
       <h3>Новая метка 💩</h3>
       <p id="location-info" class="location-info"></p>
 
+      <label>Название заведения</label>
+      <input type="text" id="poop-place" placeholder="Кафе, ТЦ, дом, лес..." />
+
       <label>Дата</label>
       <input type="datetime-local" id="poop-date" />
 
       <label>Заметка (необязательно)</label>
       <textarea id="poop-note" placeholder="Что-нибудь запомнилось?" rows="3"></textarea>
 
-      <label>Оценка</label>
+      <label>Оценка туалета 🚽</label>
       <div class="rating" id="poop-rating">
         <span data-rating="1">⭐</span>
         <span data-rating="2">⭐</span>
@@ -105,6 +108,9 @@
         <span data-rating="4">⭐</span>
         <span data-rating="5">⭐</span>
       </div>
+
+      <label>Как прошёл процесс? 💩</label>
+      <div class="process-chips" id="poop-process"></div>
 
       <div class="modal-actions">
         <button id="modal-cancel">Отмена</button>
@@ -117,9 +123,11 @@
   <div id="view-modal" class="modal hidden">
     <div class="modal-content">
       <h3 id="view-title">💩 Метка</h3>
+      <p id="view-place" class="view-place"></p>
       <p id="view-user" class="muted"></p>
       <p id="view-date"></p>
       <p id="view-rating-display"></p>
+      <p id="view-process"></p>
       <p id="view-note"></p>
       <div class="modal-actions">
         <button id="view-delete" class="danger hidden">Удалить</button>

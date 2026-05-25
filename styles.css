@@ -273,6 +273,38 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .rating span.selected,
 .rating span.hover { opacity: 1; }
 
+.process-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.process-chips .chip {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
+  transition: background 0.1s, color 0.1s;
+}
+
+.process-chips .chip:hover { border-color: var(--brown-light); }
+
+.process-chips .chip.selected {
+  background: var(--brown);
+  color: white;
+  border-color: var(--brown);
+}
+
+#view-place {
+  font-weight: 600;
+  color: var(--brown-dark);
+  margin-bottom: 4px;
+}
+
 .location-info {
   background: #f5efe5;
   padding: 10px;

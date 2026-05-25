@@ -12,6 +12,23 @@ let pendingLatLng = null;
 let selectedRating = 0;
 let editingPoopId = null;
 let addingMode = false;
+let selectedProcess = null;
+
+// Форматы процесса (можно дополнять)
+const PROCESS_TYPES = [
+  '🧈 Как по маслу',
+  '💥 Разрывные',
+  '💪 Крепыши',
+  '🚢 Непотопляйка',
+  '👻 Призрак (чистенько)',
+  '🪨 Камень',
+  '🌊 Жидкий формат',
+  '🔁 Вторая попытка',
+  '⚡ Турбо',
+  '🐢 Долгая эпопея',
+  '🚫 Не получилось',
+  '🚨 Ложная тревога',
+];
 
 // === HELPERS ===
 function $(id) { return document.getElementById(id); }
@@ -163,9 +180,12 @@ function openAddModal() {
   const localISO = new Date(now - tz).toISOString().slice(0, 16);
   $('poop-date').value = localISO;
 
+  $('poop-place').value = '';
   $('poop-note').value = '';
   selectedRating = 0;
   updateRatingUI();
+  selectedProcess = null;
+  renderProcessChips();
 
   $('location-info').textContent =
     `📍 ${pendingLatLng.lat.toFixed(5)}, ${pendingLatLng.lng.toFixed(5)}`;
@@ -173,9 +193,26 @@ function openAddModal() {
   show('add-modal');
 }
 
+function renderProcessChips() {
+  const container = $('poop-process');
+  container.innerHTML = '';
+  PROCESS_TYPES.forEach(type => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (type === selectedProcess ? ' selected' : '');
+    chip.textContent = type;
+    chip.addEventListener('click', () => {
+      // повторный клик снимает выбор
+      selectedProcess = (selectedProcess === type) ? null : type;
+      renderProcessChips();
+    });
+    container.appendChild(chip);
+  });
+}
+
 $('modal-cancel').addEventListener('click', () => hide('add-modal'));
 
 $('modal-save').addEventListener('click', async () => {
+  const place = $('poop-place').value.trim();
   const note = $('poop-note').value.trim();
   const dateStr = $('poop-date').value;
 
@@ -188,8 +225,10 @@ $('modal-save').addEventListener('click', async () => {
     user_id: currentUser.id,
     latitude: pendingLatLng.lat,
     longitude: pendingLatLng.lng,
+    place_name: place || null,
     note: note || null,
     rating: selectedRating || null,
+    process_type: selectedProcess || null,
     pooped_at: poopedAt
   });
   $('modal-save').disabled = false;
@@ -266,9 +305,11 @@ async function loadPoops() {
 
 function showPoopDetails(poop, username, isOwn) {
   $('view-title').textContent = '💩 ' + (isOwn ? 'Твоя метка' : 'Метка друга');
+  $('view-place').textContent = poop.place_name ? '📍 ' + poop.place_name : '';
   $('view-user').textContent = '@' + username;
   $('view-date').textContent = '📅 ' + new Date(poop.pooped_at).toLocaleString('ru-RU');
-  $('view-rating-display').textContent = poop.rating ? '⭐'.repeat(poop.rating) : '';
+  $('view-rating-display').textContent = poop.rating ? '🚽 ' + '⭐'.repeat(poop.rating) : '';
+  $('view-process').textContent = poop.process_type || '';
   $('view-note').textContent = poop.note || '';
 
   editingPoopId = isOwn ? poop.id : null;
@@ -481,6 +522,13 @@ async function renderStats(myPoopsArg) {
     ? new Date(Math.max(...myPoops.map(p => new Date(p.pooped_at)))).toLocaleString('ru-RU')
     : '—';
 
+  const processCounts = {};
+  myPoops.forEach(p => {
+    if (p.process_type) processCounts[p.process_type] = (processCounts[p.process_type] || 0) + 1;
+  });
+  const topProcess = Object.keys(processCounts)
+    .sort((a, b) => processCounts[b] - processCounts[a])[0] || '—';
+
   $('stats-content').innerHTML = `
     <div class="stat-card">
       <div class="big-num">${total}</div>
@@ -488,11 +536,15 @@ async function renderStats(myPoopsArg) {
     </div>
     <div class="stat-card">
       <div class="big-num">${avgRating}</div>
-      <div class="label">средняя оценка</div>
+      <div class="label">средняя оценка туалета 🚽</div>
     </div>
     <div class="stat-card">
       <div class="big-num">${uniqueDays}</div>
       <div class="label">дней активности</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">любимый формат:</div>
+      <div style="font-size: 18px; margin-top: 4px;">${topProcess}</div>
     </div>
     <div class="stat-card">
       <div class="label">последний раз:</div>
