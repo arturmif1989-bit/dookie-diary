@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Dookie Diary 💩</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💩</text></svg>" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Экран авторизации -->
+  <div id="auth-screen" class="screen">
+    <div class="auth-box">
+      <h1>💩</h1>
+      <h2>Dookie Diary</h2>
+      <p class="tagline">Карта твоих подвигов</p>
+
+      <div id="auth-error" class="error-msg hidden"></div>
+
+      <div id="signin-form">
+        <input type="email" id="signin-email" placeholder="Email" autocomplete="email" />
+        <input type="password" id="signin-password" placeholder="Пароль" autocomplete="current-password" />
+        <button id="signin-btn" class="primary">Войти</button>
+        <p class="switch">Нет аккаунта? <a id="show-signup">Регистрация</a></p>
+      </div>
+
+      <div id="signup-form" class="hidden">
+        <input type="text" id="signup-username" placeholder="Никнейм" autocomplete="username" />
+        <input type="email" id="signup-email" placeholder="Email" autocomplete="email" />
+        <input type="password" id="signup-password" placeholder="Пароль (минимум 6 символов)" autocomplete="new-password" />
+        <button id="signup-btn" class="primary">Создать аккаунт</button>
+        <p class="switch">Уже есть аккаунт? <a id="show-signin">Войти</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Главный экран -->
+  <div id="app-screen" class="screen hidden">
+    <header>
+      <div class="logo">💩 Dookie Diary</div>
+      <nav>
+        <button id="tab-map" class="nav-btn active">Карта</button>
+        <button id="tab-friends" class="nav-btn">Друзья</button>
+        <button id="tab-stats" class="nav-btn">Статистика</button>
+        <button id="logout-btn" class="nav-btn logout">Выйти</button>
+      </nav>
+    </header>
+
+    <!-- Карта -->
+    <div id="map-view" class="view">
+      <div id="map"></div>
+      <button id="add-poop-btn" class="fab" title="Добавить метку">+</button>
+    </div>
+
+    <!-- Друзья -->
+    <div id="friends-view" class="view hidden">
+      <div class="container">
+        <h2>Найти друзей</h2>
+        <div class="search-bar">
+          <input type="text" id="friend-search" placeholder="Никнейм друга..." />
+          <button id="friend-search-btn">Искать</button>
+        </div>
+        <div id="search-results"></div>
+
+        <h2>Заявки в друзья</h2>
+        <div id="pending-requests"></div>
+
+        <h2>Мои друзья</h2>
+        <div id="friends-list"></div>
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div id="stats-view" class="view hidden">
+      <div class="container">
+        <h2>Твоя статистика 💩</h2>
+        <div id="stats-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка добавления метки -->
+  <div id="add-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Новая метка 💩</h3>
+      <p id="location-info" class="location-info"></p>
+
+      <label>Дата</label>
+      <input type="datetime-local" id="poop-date" />
+
+      <label>Заметка (необязательно)</label>
+      <textarea id="poop-note" placeholder="Что-нибудь запомнилось?" rows="3"></textarea>
+
+      <label>Оценка</label>
+      <div class="rating" id="poop-rating">
+        <span data-rating="1">⭐</span>
+        <span data-rating="2">⭐</span>
+        <span data-rating="3">⭐</span>
+        <span data-rating="4">⭐</span>
+        <span data-rating="5">⭐</span>
+      </div>
+
+      <div class="modal-actions">
+        <button id="modal-cancel">Отмена</button>
+        <button id="modal-save" class="primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка просмотра метки -->
+  <div id="view-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="view-title">💩 Метка</h3>
+      <p id="view-user" class="muted"></p>
+      <p id="view-date"></p>
+      <p id="view-rating-display"></p>
+      <p id="view-note"></p>
+      <div class="modal-actions">
+        <button id="view-delete" class="danger hidden">Удалить</button>
+        <button id="view-close" class="primary">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
