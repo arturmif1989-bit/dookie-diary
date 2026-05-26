@@ -1,0 +1,19 @@
+{
+  "name": "Какарта",
+  "short_name": "Какарта",
+  "description": "Карта твоих подвигов 💩",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf6f1",
+  "theme_color": "#6b4423",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
