@@ -208,6 +208,42 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .fab:hover { transform: scale(1.05); }
 
+/* Кнопка «где я» (над «+») */
+.locate-fab {
+  position: absolute;
+  bottom: 96px;
+  right: 26px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--brown);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.3);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.locate-fab:hover { transform: scale(1.05); }
+.loc-arrow { display: inline-block; font-size: 20px; transform: rotate(-45deg); }
+
+/* Точка «ты здесь» */
+.me-dot {
+  width: 16px;
+  height: 16px;
+  background: #2196f3;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  animation: me-pulse 1.8s infinite;
+}
+@keyframes me-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(33,150,243,0.5); }
+  70%  { box-shadow: 0 0 0 14px rgba(33,150,243,0); }
+  100% { box-shadow: 0 0 0 0 rgba(33,150,243,0); }
+}
+
 /* === MODAL === */
 .modal {
   position: fixed;
@@ -481,6 +517,10 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
   .fab {
     bottom: calc(20px + env(safe-area-inset-bottom));
     right: 18px;
+  }
+  .locate-fab {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    right: 20px;
   }
 
   /* Тост не залезает под полоску */

@@ -326,6 +326,24 @@ $('map-search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); searchPlace(); }
 });
 
+// Кнопка «где я» — центрируем карту на текущем GPS и ставим точку «ты здесь»
+let myLocMarker = null;
+$('locate-btn').addEventListener('click', () => {
+  if (!navigator.geolocation) return toast('Геолокация недоступна', 'error');
+  toast('Ищу тебя… 📍');
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      if (map) map.setView([latitude, longitude], 16);
+      const icon = L.divIcon({ html: '<div class="me-dot"></div>', className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
+      if (myLocMarker) myLocMarker.setLatLng([latitude, longitude]);
+      else if (map) myLocMarker = L.marker([latitude, longitude], { icon, zIndexOffset: 2000 }).addTo(map);
+    },
+    () => toast('Не удалось определить место', 'error'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+
 // «Отметиться здесь» — ставим метку в найденном месте, имя подставляем
 $('search-here-btn').addEventListener('click', () => {
   if (!foundPlace) return;
