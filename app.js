@@ -18,6 +18,9 @@ let tileLayer = null;
 let markerCluster = null;
 let profileNames = {}; // id -> username (для просмотра профиля друга)
 let profileColors = {}; // id -> marker_color
+let editPoopId = null;  // id метки, которую сейчас редактируем (null = новая)
+let viewedPoop = null;  // метка, открытая в окне просмотра
+let foundPlace = null;  // последнее найденное через поиск место {lat, lng, name}
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -229,6 +232,9 @@ function initMap() {
     openAddModal();
   });
 
+  // прячем кнопку «Отметиться здесь» при ручном перемещении карты
+  map.on('dragstart', () => $('search-here-btn').classList.add('hidden'));
+
   // Попробуем получить геолокацию пользователя — крупный план улиц
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -300,6 +306,8 @@ async function searchPlace() {
     if (!isFinite(lat) || !isFinite(lon)) { toast('Ничего не найдено 🤷', 'error'); return; }
     if (map) map.setView([lat, lon], 16);
     const name = (place.display_name || q).split(',').slice(0, 2).join(',');
+    foundPlace = { lat, lng: lon, name };
+    $('search-here-btn').classList.remove('hidden');
     toast('📍 ' + name, 'success');
   } catch (e) {
     toast('Поиск недоступен, попробуй ещё раз', 'error');
@@ -313,7 +321,19 @@ $('map-search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); searchPlace(); }
 });
 
+// «Отметиться здесь» — ставим метку в найденном месте, имя подставляем
+$('search-here-btn').addEventListener('click', () => {
+  if (!foundPlace) return;
+  pendingLatLng = { lat: foundPlace.lat, lng: foundPlace.lng };
+  $('search-here-btn').classList.add('hidden');
+  openAddModal();
+  $('poop-place').value = foundPlace.name;
+});
+
 function openAddModal() {
+  editPoopId = null;
+  $('add-title').textContent = 'Новая метка 💩';
+  $('pick-on-map').style.display = '';
   // дата = сейчас
   const now = new Date();
   const tz = now.getTimezoneOffset() * 60000;
@@ -363,19 +383,23 @@ $('modal-save').addEventListener('click', async () => {
     return toast('Кривые координаты — выбери место заново', 'error');
   }
 
-  const poopedAt = new Date(dateStr).toISOString();
-
-  $('modal-save').disabled = true;
-  const { error } = await sb.from('poops').insert({
-    user_id: currentUser.id,
-    latitude: pendingLatLng.lat,
-    longitude: pendingLatLng.lng,
+  const payload = {
+    latitude: lat,
+    longitude: lng,
     place_name: place || null,
     note: note || null,
     rating: selectedRating || null,
     process_type: selectedProcess || null,
-    pooped_at: poopedAt
-  });
+    pooped_at: new Date(dateStr).toISOString()
+  };
+
+  $('modal-save').disabled = true;
+  let error;
+  if (editPoopId) {
+    ({ error } = await sb.from('poops').update(payload).eq('id', editPoopId));
+  } else {
+    ({ error } = await sb.from('poops').insert({ user_id: currentUser.id, ...payload }));
+  }
   $('modal-save').disabled = false;
 
   if (error) {
@@ -383,10 +407,16 @@ $('modal-save').addEventListener('click', async () => {
     return;
   }
 
+  const wasEdit = !!editPoopId;
+  editPoopId = null;
   hide('add-modal');
-  poopConfetti();
+  if (wasEdit) {
+    toast('Изменено ✏️', 'success');
+  } else {
+    poopConfetti();
+  }
   await loadPoops();
-  announceNearby(pendingLatLng);
+  if (!wasEdit) announceNearby(pendingLatLng);
 });
 
 // Рейтинг
@@ -509,13 +539,37 @@ function showPoopDetails(poop, username, isOwn) {
   $('view-note').textContent = poop.note || '';
 
   editingPoopId = isOwn ? poop.id : null;
+  viewedPoop = poop;
   $('view-delete').classList.toggle('hidden', !isOwn);
+  $('view-edit').classList.toggle('hidden', !isOwn);
 
   show('view-modal');
 }
 
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
+
+// Открыть метку на редактирование (своя метка)
+function openEditModal(poop) {
+  if (!poop) return;
+  hide('view-modal');
+  pendingLatLng = { lat: poop.latitude, lng: poop.longitude };
+  const d = new Date(poop.pooped_at);
+  const tz = d.getTimezoneOffset() * 60000;
+  $('poop-date').value = new Date(d - tz).toISOString().slice(0, 16);
+  $('poop-place').value = poop.place_name || '';
+  $('poop-note').value = poop.note || '';
+  selectedRating = poop.rating || 0;
+  updateRatingUI();
+  selectedProcess = poop.process_type || null;
+  renderProcessChips();
+  $('location-info').textContent = `📍 ${poop.latitude.toFixed(5)}, ${poop.longitude.toFixed(5)}`;
+  editPoopId = poop.id;
+  $('add-title').textContent = 'Изменить метку ✏️';
+  $('pick-on-map').style.display = 'none';
+  show('add-modal');
+}
+$('view-edit').addEventListener('click', () => openEditModal(viewedPoop));
 
 $('view-delete').addEventListener('click', async () => {
   if (!editingPoopId) return;
@@ -533,9 +587,10 @@ $('view-delete').addEventListener('click', async () => {
 $('tab-map').addEventListener('click', () => switchTab('map'));
 $('tab-friends').addEventListener('click', () => switchTab('friends'));
 $('tab-stats').addEventListener('click', () => switchTab('stats'));
+$('tab-feed').addEventListener('click', () => switchTab('feed'));
 
 function switchTab(name) {
-  ['map', 'friends', 'stats'].forEach(t => {
+  ['map', 'friends', 'stats', 'feed'].forEach(t => {
     $('tab-' + t).classList.toggle('active', t === name);
     $(t + '-view').classList.toggle('hidden', t !== name);
   });
@@ -545,6 +600,51 @@ function switchTab(name) {
   }
   if (name === 'friends') loadFriends();
   if (name === 'stats') renderStats();
+  if (name === 'feed') loadFeed();
+}
+
+// === ЛЕНТА АКТИВНОСТИ (свои + друзей, по RLS) ===
+async function loadFeed() {
+  const container = $('feed-content');
+  container.innerHTML = '<p class="empty">Загрузка…</p>';
+  const { data: poops, error } = await sb
+    .from('poops')
+    .select('*')
+    .order('pooped_at', { ascending: false })
+    .limit(30);
+  if (error) {
+    container.innerHTML = `<p class="empty">Ошибка: ${escapeHtml(error.message)}</p>`;
+    return;
+  }
+  if (!poops || poops.length === 0) {
+    container.innerHTML = '<p class="empty">Пока пусто. Поставь метку или добавь друзей!</p>';
+    return;
+  }
+  const ids = [...new Set(poops.map(p => p.user_id))];
+  const { data: profs } = await sb.from('profiles').select('id, username, marker_color').in('id', ids);
+  (profs || []).forEach(p => { profileNames[p.id] = p.username; profileColors[p.id] = p.marker_color; });
+
+  container.innerHTML = '';
+  poops.forEach(poop => {
+    const who = escapeHtml(profileNames[poop.user_id] || '?');
+    const mine = poop.user_id === currentUser.id;
+    const color = safeColor(profileColors[poop.user_id]);
+    const place = poop.place_name ? escapeHtml(poop.place_name) : 'где-то';
+    const stars = poop.rating ? '🚽 ' + '⭐'.repeat(poop.rating) : '';
+    const proc = poop.process_type ? escapeHtml(poop.process_type) : '';
+    const when = new Date(poop.pooped_at).toLocaleString('ru-RU');
+    const card = document.createElement('div');
+    card.className = 'feed-card';
+    card.innerHTML = `
+      <div class="feed-pin" style="background:${color}">💩</div>
+      <div class="feed-body">
+        <div class="feed-top"><b>@${who}${mine ? ' · ты' : ''}</b> · 📍 ${place}</div>
+        <div class="feed-meta">${stars} ${proc}</div>
+        <div class="feed-date">${when}</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 // === ДРУЗЬЯ ===
