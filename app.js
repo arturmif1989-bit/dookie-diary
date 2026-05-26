@@ -14,6 +14,7 @@ let editingPoopId = null;
 let addingMode = false;
 let selectedProcess = null;
 let allPoops = [];
+let tileLayer = null;
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -125,6 +126,67 @@ async function enterApp() {
   show('app-screen');
   initMap();
   await loadPoops();
+  updateFriendsBadge();
+}
+
+// === ТЕМА / ЭФФЕКТЫ / УТИЛИТЫ ===
+function getTileLayer() {
+  const dark = document.body.classList.contains('dark');
+  return dark
+    ? L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, detectRetina: true })
+    : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19, detectRetina: true });
+}
+
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  const tb = $('theme-btn');
+  if (tb) tb.textContent = dark ? '☀️' : '🌙';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? '#1c1410' : '#6b4423';
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  if (map && tileLayer) {
+    map.removeLayer(tileLayer);
+    tileLayer = getTileLayer().addTo(map);
+  }
+}
+
+$('theme-btn').addEventListener('click', () => {
+  applyTheme(!document.body.classList.contains('dark'));
+});
+
+// применяем сохранённую тему сразу при загрузке
+applyTheme(localStorage.getItem('theme') === 'dark');
+
+function ratingColor(r) {
+  return ['#9e9e9e', '#c0392b', '#e67e22', '#f1c40f', '#7cb342', '#27ae60'][r || 0];
+}
+
+function poopConfetti() {
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  for (let i = 0; i < 24; i++) {
+    const s = document.createElement('span');
+    s.textContent = '💩';
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.animationDelay = (Math.random() * 0.4) + 's';
+    s.style.fontSize = (16 + Math.random() * 20) + 'px';
+    layer.appendChild(s);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 2500);
+}
+
+async function updateFriendsBadge() {
+  const { count } = await sb.from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('addressee_id', currentUser.id)
+    .eq('status', 'pending');
+  const b = $('friends-badge');
+  if (!b) return;
+  if (count && count > 0) { b.textContent = count; b.classList.remove('hidden'); }
+  else b.classList.add('hidden');
 }
 
 // === КАРТА ===
@@ -133,11 +195,7 @@ function initMap() {
 
   map = L.map('map').setView([55.7558, 37.6173], 11); // дефолт — Москва
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19,
-    detectRetina: true
-  }).addTo(map);
+  tileLayer = getTileLayer().addTo(map);
 
   // Клик по карте в режиме добавления — ставим точную метку
   map.on('click', (e) => {
@@ -240,6 +298,7 @@ $('modal-save').addEventListener('click', async () => {
   }
 
   hide('add-modal');
+  poopConfetti();
   await loadPoops();
   announceNearby(pendingLatLng);
 });
@@ -326,13 +385,15 @@ async function loadPoops() {
     if (profiles) profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.username]));
   }
 
+  let ownCount = 0;
   poops.forEach(poop => {
     const isOwn = poop.user_id === currentUser.id;
+    if (isOwn) ownCount++;
     const icon = L.divIcon({
-      html: `<div class="poop-marker">${isOwn ? '💩' : '🟤'}</div>`,
+      html: `<div class="poop-pin" style="border-color:${ratingColor(poop.rating)}">${isOwn ? '💩' : '🟤'}</div>`,
       className: '',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
     });
 
     const marker = L.marker([poop.latitude, poop.longitude], { icon })
@@ -341,6 +402,8 @@ async function loadPoops() {
 
     markers.push(marker);
   });
+
+  $('map-hint').classList.toggle('hidden', ownCount > 0);
 
   await renderStats(poops.filter(p => p.user_id === currentUser.id));
 }
@@ -461,6 +524,7 @@ window.sendRequest = async function(userId) {
   toast('Запрос отправлен', 'success');
   searchFriends();
   loadFriends();
+  updateFriendsBadge();
 };
 
 window.acceptRequest = async function(friendshipId) {
@@ -469,6 +533,7 @@ window.acceptRequest = async function(friendshipId) {
   toast('Теперь вы друзья 🎉', 'success');
   loadFriends();
   loadPoops();
+  updateFriendsBadge();
 };
 
 window.removeFriend = async function(friendshipId) {
@@ -478,6 +543,7 @@ window.removeFriend = async function(friendshipId) {
   toast('Удалено', 'success');
   loadFriends();
   loadPoops();
+  updateFriendsBadge();
 };
 
 async function loadFriends() {

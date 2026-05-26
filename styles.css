@@ -486,3 +486,88 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
   /* Тост не залезает под полоску */
   .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
 }
+
+/* === ТЁМНАЯ ТЕМА === */
+body.dark {
+  --bg: #1c1410;
+  --card: #2a201a;
+  --text: #f0e6da;
+  --muted: #a89a8a;
+  --border: #3a2e24;
+}
+body.dark .auth-box,
+body.dark .modal-content,
+body.dark .modal-actions button { background: var(--card); color: var(--text); }
+body.dark .auth-box input,
+body.dark .auth-box input:focus,
+body.dark .modal-content input,
+body.dark .modal-content textarea,
+body.dark .process-chips .chip,
+body.dark .search-bar input { background: #221a14; color: var(--text); border-color: var(--border); }
+body.dark .location-info { background: #221a14; }
+body.dark .auth-box h2,
+body.dark .container h2,
+body.dark .modal-content h3,
+body.dark .stat-card .big-num { color: #e8c9a0; }
+
+/* === ПИНЫ НА КАРТЕ === */
+.poop-pin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.35);
+}
+
+/* === КОНФЕТТИ === */
+.confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 4000; overflow: hidden; }
+.confetti-layer span { position: absolute; top: -40px; animation: confetti-fall 2s linear forwards; }
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0.2; }
+}
+
+/* === ПОДСКАЗКА НА ПУСТОЙ КАРТЕ === */
+.map-hint {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brown-dark);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 800;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  max-width: 90%;
+  text-align: center;
+}
+
+/* === СЧЁТЧИК ЗАЯВОК === */
+.badge-count {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 5px;
+  margin-left: 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* === АНИМАЦИИ === */
+.modal:not(.hidden) .modal-content { animation: modal-in 0.22s ease; }
+@keyframes modal-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.view:not(.hidden) .container { animation: fade-in 0.25s ease; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
