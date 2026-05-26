@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#6b4423"/>
-  <text x="50%" y="52%" dominant-baseline="central" text-anchor="middle" font-size="300">💩</text>
+  <text x="256" y="310" font-size="300" text-anchor="middle" dominant-baseline="central">💩</text>
+  <text x="250" y="160" font-size="150" text-anchor="middle" dominant-baseline="central" transform="rotate(-12 250 160)">🧢</text>
 </svg>
