@@ -607,6 +607,52 @@ $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal
   if (m) m.addEventListener('click', (e) => { if (e.target === m) hide(id); });
 });
 
+// Смахивание окна вниз пальцем (мобильные) — закрывает любое всплывающее окно.
+// Не мешает вводу: если палец стартует на поле ввода или контент проскроллен — не тянем.
+function enableSwipeClose(modalId) {
+  const modal = $(modalId);
+  if (!modal) return;
+  const content = modal.querySelector('.modal-content');
+  if (!content) return;
+  let startY = 0, dy = 0, dragging = false;
+
+  content.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1 || content.scrollTop > 2) { dragging = false; return; }
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') { dragging = false; return; }
+    startY = e.touches[0].clientY;
+    dy = 0;
+    dragging = true;
+    content.style.transition = 'none';
+  }, { passive: true });
+
+  content.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy > 0) {
+      content.style.transform = `translateY(${dy}px)`;
+      if (e.cancelable) e.preventDefault(); // не скроллим страницу за окном
+    }
+  }, { passive: false });
+
+  const finish = () => {
+    if (!dragging) return;
+    dragging = false;
+    content.style.transition = '';
+    if (dy > 90) {
+      content.style.transform = 'translateY(110%)';
+      setTimeout(() => { hide(modalId); content.style.transform = ''; }, 200);
+    } else {
+      content.style.transform = '';
+    }
+  };
+  content.addEventListener('touchend', finish);
+  content.addEventListener('touchcancel', finish);
+}
+
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'add-modal', 'signup-modal']
+  .forEach(enableSwipeClose);
+
 // Открыть метку на редактирование (своя метка)
 function openEditModal(poop) {
   if (!poop) return;
