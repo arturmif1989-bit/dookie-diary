@@ -601,6 +601,12 @@ window.toggleReaction = async function(poopId, emoji) {
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
 
+// Закрытие окон тапом по тёмной области (кроме форм с вводом — чтобы не терять данные)
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal'].forEach(id => {
+  const m = $(id);
+  if (m) m.addEventListener('click', (e) => { if (e.target === m) hide(id); });
+});
+
 // Открыть метку на редактирование (своя метка)
 function openEditModal(poop) {
   if (!poop) return;
