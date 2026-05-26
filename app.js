@@ -16,6 +16,7 @@ let selectedProcess = null;
 let allPoops = [];
 let tileLayer = null;
 let markerCluster = null;
+let profileNames = {}; // id -> username (для просмотра профиля друга)
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -418,6 +419,7 @@ async function loadPoops() {
       .select('id, username')
       .in('id', userIds);
     if (profiles) profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.username]));
+    Object.assign(profileNames, profilesMap);
   }
 
   let ownCount = 0;
@@ -459,6 +461,7 @@ function showPoopDetails(poop, username, isOwn) {
 }
 
 $('view-close').addEventListener('click', () => hide('view-modal'));
+$('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
 
 $('view-delete').addEventListener('click', async () => {
   if (!editingPoopId) return;
@@ -484,6 +487,7 @@ function switchTab(name) {
   });
   if (name === 'map' && map) {
     setTimeout(() => map.invalidateSize(), 100);
+    loadPoops(); // подтягиваем свежие метки (в т.ч. новые метки друзей)
   }
   if (name === 'friends') loadFriends();
   if (name === 'stats') renderStats();
@@ -581,6 +585,36 @@ window.removeFriend = async function(friendshipId) {
   updateFriendsBadge();
 };
 
+// Просмотр статистики и достижений друга (данные уже в allPoops по RLS)
+window.showFriendStats = function(userId) {
+  const username = profileNames[userId] || '?';
+  const poops = allPoops.filter(p => p.user_id === userId);
+  const total = poops.length;
+  const rated = poops.filter(p => p.rating);
+  const avg = rated.length
+    ? (rated.reduce((a, p) => a + p.rating, 0) / rated.length).toFixed(1)
+    : '—';
+  const s = computeAchStats(poops);
+  const unlocked = ACHIEVEMENTS.filter(a => a.test(s)).length;
+
+  $('friend-stats-title').textContent = '@' + username;
+  $('friend-stats-body').innerHTML = `
+    <div class="stat-card"><div class="big-num">${total}</div><div class="label">меток 💩</div></div>
+    <div class="stat-card"><div class="big-num">${avg}</div><div class="label">средняя оценка 🚽</div></div>
+    <div class="stat-card"><div class="big-num">${s.uniqueDays}</div><div class="label">дней активности</div></div>
+    <h2 style="margin-top:14px;">Достижения 🏆 (${unlocked}/${ACHIEVEMENTS.length})</h2>
+    <div class="achievements">${ACHIEVEMENTS.map(a => {
+      const got = a.test(s);
+      return `<div class="badge ${got ? 'unlocked' : ''}">
+          <div class="emoji">${a.emoji}</div>
+          <div class="b-title">${a.title}</div>
+          <div class="b-desc">${a.desc}</div>
+        </div>`;
+    }).join('')}</div>
+  `;
+  show('friend-stats-modal');
+};
+
 async function loadFriends() {
   // Заявки
   const { data: pending } = await sb
@@ -633,13 +667,14 @@ async function loadFriends() {
   );
   const { data: profs } = await sb.from('profiles').select('id, username').in('id', otherIds);
   const profMap = Object.fromEntries((profs || []).map(p => [p.id, p.username]));
+  Object.assign(profileNames, profMap);
 
   friends.forEach(f => {
     const otherId = f.requester_id === currentUser.id ? f.addressee_id : f.requester_id;
     const card = document.createElement('div');
     card.className = 'user-card';
     card.innerHTML = `
-      <div class="username">@${escapeHtml(profMap[otherId] || '?')}</div>
+      <div class="username" style="cursor:pointer" onclick="showFriendStats('${otherId}')">@${escapeHtml(profMap[otherId] || '?')} 📊</div>
       <div><button class="danger" onclick="removeFriend('${f.id}')">Удалить</button></div>
     `;
     friendsContainer.appendChild(card);
