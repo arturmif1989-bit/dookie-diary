@@ -17,6 +17,7 @@ let allPoops = [];
 let tileLayer = null;
 let markerCluster = null;
 let profileNames = {}; // id -> username (для просмотра профиля друга)
+let profileColors = {}; // id -> marker_color
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -33,6 +34,20 @@ const PROCESS_TYPES = [
   '🚫 Не получилось',
   '🚨 Ложная тревога',
 ];
+
+// Палитра цветов метки (выбирается в профиле). 6×5 = 30.
+const MARKER_COLORS = [
+  '#e74c3c', '#c0392b', '#e67e22', '#d35400', '#f39c12', '#f1c40f',
+  '#cddc39', '#8bc34a', '#4caf50', '#27ae60', '#16a085', '#009688',
+  '#00bcd4', '#03a9f4', '#2196f3', '#3f51b5', '#673ab7', '#9b59b6',
+  '#9c27b0', '#e91e63', '#ff6f91', '#ff5722', '#795548', '#5d4037',
+  '#607d8b', '#455a64', '#9e9e9e', '#2c3e50', '#ff9800', '#ffc107',
+];
+const DEFAULT_MARKER_COLOR = '#ffffff';
+// Только настоящий hex-цвет — защита от подстановки произвольного значения в разметку
+function safeColor(c) {
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : DEFAULT_MARKER_COLOR;
+}
 
 // === HELPERS ===
 function $(id) { return document.getElementById(id); }
@@ -208,7 +223,8 @@ function initMap() {
   // Клик по карте в режиме добавления — ставим точную метку
   map.on('click', (e) => {
     if (!addingMode) return;
-    pendingLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
+    const ll = e.latlng.wrap(); // нормализуем долготу в -180..180 (карта прокручивается бесконечно)
+    pendingLatLng = { lat: ll.lat, lng: ll.lng };
     setAddingMode(false);
     openAddModal();
   });
@@ -313,6 +329,11 @@ $('modal-save').addEventListener('click', async () => {
 
   if (!dateStr) return toast('Укажи дату', 'error');
 
+  const { lat, lng } = pendingLatLng;
+  if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return toast('Кривые координаты — выбери место заново', 'error');
+  }
+
   const poopedAt = new Date(dateStr).toISOString();
 
   $('modal-save').disabled = true;
@@ -416,9 +437,12 @@ async function loadPoops() {
   if (userIds.length > 0) {
     const { data: profiles } = await sb
       .from('profiles')
-      .select('id, username')
+      .select('id, username, marker_color')
       .in('id', userIds);
-    if (profiles) profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.username]));
+    if (profiles) {
+      profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.username]));
+      profiles.forEach(p => { profileColors[p.id] = p.marker_color; });
+    }
     Object.assign(profileNames, profilesMap);
   }
 
@@ -426,8 +450,9 @@ async function loadPoops() {
   poops.forEach(poop => {
     const isOwn = poop.user_id === currentUser.id;
     if (isOwn) ownCount++;
+    const ownerColor = safeColor(profileColors[poop.user_id]);
     const icon = L.divIcon({
-      html: `<div class="poop-pin" style="border-color:${ratingColor(poop.rating)}">${isOwn ? '💩' : '🟤'}</div>`,
+      html: `<div class="poop-pin" style="background:${ownerColor};border-color:${ratingColor(poop.rating)}">💩</div>`,
       className: '',
       iconSize: [34, 34],
       iconAnchor: [17, 17]
@@ -614,6 +639,29 @@ window.showFriendStats = function(userId) {
   `;
   show('friend-stats-modal');
 };
+
+// === ЦВЕТ МЕТКИ (профиль) ===
+async function openColorModal() {
+  const { data } = await sb.from('profiles').select('marker_color').eq('id', currentUser.id).single();
+  const current = data ? data.marker_color : null;
+  $('color-grid').innerHTML = MARKER_COLORS.map(c =>
+    `<div class="color-swatch${c === current ? ' selected' : ''}" style="background:${c}" onclick="pickColor('${c}')">💩</div>`
+  ).join('');
+  show('color-modal');
+}
+
+window.pickColor = async function(color) {
+  const safe = safeColor(color);
+  const { error } = await sb.from('profiles').update({ marker_color: safe }).eq('id', currentUser.id);
+  if (error) return toast('Ошибка: ' + error.message, 'error');
+  profileColors[currentUser.id] = safe;
+  hide('color-modal');
+  toast('Цвет метки обновлён 🎨', 'success');
+  loadPoops();
+};
+
+$('color-btn').addEventListener('click', openColorModal);
+$('color-close').addEventListener('click', () => hide('color-modal'));
 
 async function loadFriends() {
   // Заявки

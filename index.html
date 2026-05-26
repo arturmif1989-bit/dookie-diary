@@ -83,6 +83,7 @@
     <div id="stats-view" class="view hidden">
       <div class="container">
         <h2>Твоя статистика 💩</h2>
+        <button id="color-btn" class="link-btn">🎨 Цвет моей метки</button>
         <div id="stats-content"></div>
 
         <h2 id="ach-title">Достижения 🏆</h2>
@@ -150,6 +151,18 @@
       <div id="friend-stats-body"></div>
       <div class="modal-actions">
         <button id="friend-stats-close" class="primary">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка выбора цвета метки -->
+  <div id="color-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Цвет твоей метки 🎨</h3>
+      <p class="muted">Так твои метки будут выглядеть на карте — и у тебя, и у друзей.</p>
+      <div id="color-grid" class="color-grid"></div>
+      <div class="modal-actions">
+        <button id="color-close" class="primary">Закрыть</button>
       </div>
     </div>
   </div>

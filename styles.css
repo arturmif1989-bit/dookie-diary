@@ -524,6 +524,28 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
   box-shadow: 0 1px 5px rgba(0,0,0,0.35);
 }
 
+/* === ПАЛИТРА ЦВЕТА МЕТКИ === */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+.color-swatch {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  border: 3px solid transparent;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
+}
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.selected { border-color: #111; }
+
 /* === КОНФЕТТИ === */
 .confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 4000; overflow: hidden; }
 .confetti-layer span { position: absolute; top: -40px; animation: confetti-fall 2s linear forwards; }
