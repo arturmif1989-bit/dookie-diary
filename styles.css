@@ -576,6 +576,9 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
   box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
 
+/* === КАПЧА В ФОРМЕ РЕГИСТРАЦИИ === */
+.h-captcha { margin: 12px 0; display: flex; justify-content: center; }
+
 /* === РЕАКЦИИ НА МЕТКИ === */
 .reactions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
 .react-btn {

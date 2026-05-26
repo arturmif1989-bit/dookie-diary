@@ -103,12 +103,16 @@ $('signup-btn').addEventListener('click', async () => {
   if (!email) return toast('Введите email', 'error');
   if (password.length < 6) return toast('Пароль минимум 6 символов', 'error');
 
+  const captchaToken = (window.hcaptcha && hcaptcha.getResponse()) || '';
+  if (!captchaToken) return toast('Подтверди, что ты не робот 🤖', 'error');
+
   $('signup-btn').disabled = true;
   const { data, error } = await sb.auth.signUp({
     email, password,
-    options: { data: { username } }
+    options: { data: { username }, captchaToken }
   });
   $('signup-btn').disabled = false;
+  if (window.hcaptcha) hcaptcha.reset();
 
   if (error) return toast(error.message, 'error');
   if (data.user && !data.session) {
