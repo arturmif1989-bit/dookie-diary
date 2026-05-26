@@ -47,6 +47,7 @@ const MARKER_COLORS = [
   '#607d8b', '#455a64', '#9e9e9e', '#2c3e50', '#ff9800', '#ffc107',
 ];
 const DEFAULT_MARKER_COLOR = '#ffffff';
+const REACTION_EMOJIS = ['👍', '😂', '🤢', '🔥', '💩'];
 // Только настоящий hex-цвет — защита от подстановки произвольного значения в разметку
 function safeColor(c) {
   return /^#[0-9a-fA-F]{6}$/.test(c) ? c : DEFAULT_MARKER_COLOR;
@@ -543,8 +544,41 @@ function showPoopDetails(poop, username, isOwn) {
   $('view-delete').classList.toggle('hidden', !isOwn);
   $('view-edit').classList.toggle('hidden', !isOwn);
 
+  loadReactions(poop.id);
   show('view-modal');
 }
+
+// === РЕАКЦИИ НА МЕТКИ ===
+async function loadReactions(poopId) {
+  const box = $('view-reactions');
+  if (!box) return;
+  box.dataset.poopId = poopId;
+  const { data } = await sb.from('reactions').select('user_id, emoji').eq('poop_id', poopId);
+  const counts = {};
+  const mine = new Set();
+  (data || []).forEach(r => {
+    counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    if (r.user_id === currentUser.id) mine.add(r.emoji);
+  });
+  box.innerHTML = REACTION_EMOJIS.map(e => {
+    const c = counts[e] || 0;
+    return `<button class="react-btn${mine.has(e) ? ' reacted' : ''}" onclick="toggleReaction('${poopId}','${e}')">${e}${c ? ' ' + c : ''}</button>`;
+  }).join('');
+}
+
+window.toggleReaction = async function(poopId, emoji) {
+  const { data } = await sb.from('reactions')
+    .select('id')
+    .eq('poop_id', poopId).eq('user_id', currentUser.id).eq('emoji', emoji)
+    .limit(1);
+  if (data && data.length) {
+    await sb.from('reactions').delete().eq('id', data[0].id);
+  } else {
+    const { error } = await sb.from('reactions').insert({ poop_id: poopId, user_id: currentUser.id, emoji });
+    if (error) { toast('Ошибка: ' + error.message, 'error'); return; }
+  }
+  loadReactions(poopId);
+};
 
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));

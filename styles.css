@@ -576,6 +576,22 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
   box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
 
+/* === РЕАКЦИИ НА МЕТКИ === */
+.reactions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
+.react-btn {
+  border: 1px solid var(--border, #ddd);
+  background: var(--card, #fff);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.react-btn.reacted {
+  background: var(--brown);
+  color: #fff;
+  border-color: var(--brown);
+}
+
 /* === ЛЕНТА АКТИВНОСТИ === */
 .feed-card {
   display: flex;
