@@ -13,6 +13,8 @@
   <meta name="apple-mobile-web-app-title" content="Какарта" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -30,14 +32,6 @@
         <input type="password" id="signin-password" placeholder="Пароль" autocomplete="current-password" />
         <button id="signin-btn" class="primary">Войти</button>
         <p class="switch">Нет аккаунта? <a id="show-signup">Регистрация</a></p>
-      </div>
-
-      <div id="signup-form" class="hidden">
-        <input type="text" id="signup-username" placeholder="Никнейм" autocomplete="username" />
-        <input type="email" id="signup-email" placeholder="Email" autocomplete="email" />
-        <input type="password" id="signup-password" placeholder="Пароль (минимум 6 символов)" autocomplete="new-password" />
-        <button id="signup-btn" class="primary">Создать аккаунт</button>
-        <p class="switch">Уже есть аккаунт? <a id="show-signin">Войти</a></p>
       </div>
     </div>
 
@@ -148,10 +142,25 @@
     </div>
   </div>
 
+  <!-- Модалка регистрации -->
+  <div id="signup-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Регистрация 💩</h3>
+      <input type="text" id="signup-username" placeholder="Никнейм" autocomplete="username" />
+      <input type="email" id="signup-email" placeholder="Email" autocomplete="email" />
+      <input type="password" id="signup-password" placeholder="Пароль (минимум 6 символов)" autocomplete="new-password" />
+      <div class="modal-actions">
+        <button id="show-signin">Уже есть аккаунт</button>
+        <button id="signup-btn" class="primary">Создать аккаунт</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>

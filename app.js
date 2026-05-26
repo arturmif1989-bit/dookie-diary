@@ -15,6 +15,7 @@ let addingMode = false;
 let selectedProcess = null;
 let allPoops = [];
 let tileLayer = null;
+let markerCluster = null;
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -63,24 +64,17 @@ async function checkAuth() {
   }
 }
 
-$('show-signup').addEventListener('click', () => {
-  hide('signin-form');
-  show('signup-form');
-});
-
-$('show-signin').addEventListener('click', () => {
-  hide('signup-form');
-  show('signin-form');
-});
+$('show-signup').addEventListener('click', () => show('signup-modal'));
+$('show-signin').addEventListener('click', () => hide('signup-modal'));
 
 $('signup-btn').addEventListener('click', async () => {
   const username = $('signup-username').value.trim();
   const email = $('signup-email').value.trim();
   const password = $('signup-password').value;
 
-  if (!username || username.length < 3) return showError('Никнейм минимум 3 символа');
-  if (!email) return showError('Введите email');
-  if (password.length < 6) return showError('Пароль минимум 6 символов');
+  if (!username || username.length < 3) return toast('Никнейм минимум 3 символа', 'error');
+  if (!email) return toast('Введите email', 'error');
+  if (password.length < 6) return toast('Пароль минимум 6 символов', 'error');
 
   $('signup-btn').disabled = true;
   const { data, error } = await sb.auth.signUp({
@@ -89,11 +83,13 @@ $('signup-btn').addEventListener('click', async () => {
   });
   $('signup-btn').disabled = false;
 
-  if (error) return showError(error.message);
+  if (error) return toast(error.message, 'error');
   if (data.user && !data.session) {
-    toast('Проверь почту для подтверждения', 'success');
+    hide('signup-modal');
+    toast('Проверь почту для подтверждения 📬', 'success');
   } else if (data.session) {
     currentUser = data.user;
+    hide('signup-modal');
     await enterApp();
   }
 });
@@ -194,8 +190,12 @@ function initMap() {
   if (map) return;
 
   map = L.map('map').setView([55.7558, 37.6173], 11); // дефолт — Москва
+  map.attributionControl.setPrefix(false); // убрать подпись/флажок Leaflet, оставить © OSM
 
   tileLayer = getTileLayer().addTo(map);
+
+  markerCluster = L.markerClusterGroup({ maxClusterRadius: 45 });
+  map.addLayer(markerCluster);
 
   // Клик по карте в режиме добавления — ставим точную метку
   map.on('click', (e) => {
@@ -359,7 +359,7 @@ function announceNearby(latlng) {
 
 // === ЗАГРУЗКА МЕТОК ===
 async function loadPoops() {
-  markers.forEach(m => map.removeLayer(m));
+  markerCluster.clearLayers();
   markers = [];
 
   const { data: poops, error } = await sb
@@ -397,8 +397,8 @@ async function loadPoops() {
     });
 
     const marker = L.marker([poop.latitude, poop.longitude], { icon })
-      .addTo(map)
       .on('click', () => showPoopDetails(poop, profilesMap[poop.user_id] || 'неизвестно', isOwn));
+    markerCluster.addLayer(marker);
 
     markers.push(marker);
   });

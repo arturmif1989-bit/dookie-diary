@@ -571,3 +571,6 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
 @keyframes modal-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .view:not(.hidden) .container { animation: fade-in 0.25s ease; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* === ОКНО РЕГИСТРАЦИИ === */
+#signup-modal input { margin-bottom: 12px; }
