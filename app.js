@@ -4,6 +4,16 @@ const SUPABASE_KEY = 'sb_publishable_fBP0vhadJASnTV91WTOuBQ_Bwfm6AEz';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// hCaptcha — явный рендер двух виджетов (регистрация и вход)
+const HCAPTCHA_SITEKEY = 'ac60b560-41a0-4088-a826-a5d2d4d459fe';
+let signupCaptchaId = null, signinCaptchaId = null;
+window.hcaptchaOnload = function() {
+  try {
+    if (document.getElementById('captcha-signup')) signupCaptchaId = hcaptcha.render('captcha-signup', { sitekey: HCAPTCHA_SITEKEY });
+    if (document.getElementById('captcha-signin')) signinCaptchaId = hcaptcha.render('captcha-signin', { sitekey: HCAPTCHA_SITEKEY });
+  } catch (e) {}
+};
+
 // === STATE ===
 let currentUser = null;
 let map = null;
@@ -103,7 +113,7 @@ $('signup-btn').addEventListener('click', async () => {
   if (!email) return toast('Введите email', 'error');
   if (password.length < 6) return toast('Пароль минимум 6 символов', 'error');
 
-  const captchaToken = (window.hcaptcha && hcaptcha.getResponse()) || '';
+  const captchaToken = (window.hcaptcha && signupCaptchaId !== null) ? hcaptcha.getResponse(signupCaptchaId) : '';
   if (!captchaToken) return toast('Подтверди, что ты не робот 🤖', 'error');
 
   $('signup-btn').disabled = true;
@@ -112,7 +122,7 @@ $('signup-btn').addEventListener('click', async () => {
     options: { data: { username }, captchaToken }
   });
   $('signup-btn').disabled = false;
-  if (window.hcaptcha) hcaptcha.reset();
+  if (window.hcaptcha && signupCaptchaId !== null) hcaptcha.reset(signupCaptchaId);
 
   if (error) return toast(error.message, 'error');
   if (data.user && !data.session) {
@@ -131,9 +141,13 @@ $('signin-btn').addEventListener('click', async () => {
 
   if (!email || !password) return showError('Заполни email и пароль');
 
+  const captchaToken = (window.hcaptcha && signinCaptchaId !== null) ? hcaptcha.getResponse(signinCaptchaId) : '';
+  if (!captchaToken) return showError('Подтверди, что ты не робот 🤖');
+
   $('signin-btn').disabled = true;
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password, options: { captchaToken } });
   $('signin-btn').disabled = false;
+  if (window.hcaptcha && signinCaptchaId !== null) hcaptcha.reset(signinCaptchaId);
 
   if (error) return showError(error.message);
   currentUser = data.user;
