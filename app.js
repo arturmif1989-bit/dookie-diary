@@ -38,6 +38,12 @@ function $(id) { return document.getElementById(id); }
 function show(id) { $(id).classList.remove('hidden'); }
 function hide(id) { $(id).classList.add('hidden'); }
 
+// Экранируем пользовательский текст перед вставкой через innerHTML (защита от XSS)
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function toast(message, type = '') {
   const t = $('toast');
   t.textContent = message;
@@ -73,6 +79,7 @@ $('signup-btn').addEventListener('click', async () => {
   const password = $('signup-password').value;
 
   if (!username || username.length < 3) return toast('Никнейм минимум 3 символа', 'error');
+  if (!/^[\p{L}\p{N}_.\- ]+$/u.test(username)) return toast('Никнейм: только буквы, цифры, пробел, _ . -', 'error');
   if (!email) return toast('Введите email', 'error');
   if (password.length < 6) return toast('Пароль минимум 6 символов', 'error');
 
@@ -503,7 +510,7 @@ async function searchFriends() {
   container.innerHTML = '';
 
   if (error) {
-    container.innerHTML = `<p class="empty">Ошибка: ${error.message}</p>`;
+    container.innerHTML = `<p class="empty">Ошибка: ${escapeHtml(error.message)}</p>`;
     return;
   }
 
@@ -537,7 +544,7 @@ async function searchFriends() {
       statusBtn = `<button onclick="acceptRequest('${friendship.id}')">Принять</button>`;
     }
 
-    card.innerHTML = `<div class="username">@${user.username}</div><div>${statusBtn}</div>`;
+    card.innerHTML = `<div class="username">@${escapeHtml(user.username)}</div><div>${statusBtn}</div>`;
     container.appendChild(card);
   });
 }
@@ -596,7 +603,7 @@ async function loadFriends() {
       const card = document.createElement('div');
       card.className = 'user-card';
       card.innerHTML = `
-        <div class="username">@${profMap[p.requester_id] || '?'}</div>
+        <div class="username">@${escapeHtml(profMap[p.requester_id] || '?')}</div>
         <div>
           <button onclick="acceptRequest('${p.id}')">Принять</button>
           <button class="danger" onclick="removeFriend('${p.id}')">Отклонить</button>
@@ -632,7 +639,7 @@ async function loadFriends() {
     const card = document.createElement('div');
     card.className = 'user-card';
     card.innerHTML = `
-      <div class="username">@${profMap[otherId] || '?'}</div>
+      <div class="username">@${escapeHtml(profMap[otherId] || '?')}</div>
       <div><button class="danger" onclick="removeFriend('${f.id}')">Удалить</button></div>
     `;
     friendsContainer.appendChild(card);
