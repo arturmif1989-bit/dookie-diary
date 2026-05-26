@@ -51,6 +51,7 @@
         <button id="tab-friends" class="nav-btn">Друзья<span id="friends-badge" class="badge-count hidden"></span></button>
         <button id="tab-stats" class="nav-btn">Статистика</button>
         <button id="tab-feed" class="nav-btn">Лента</button>
+        <button id="tab-list" class="nav-btn">Список</button>
         <button id="theme-btn" class="nav-btn" title="Сменить тему">🌙</button>
         <button id="logout-btn" class="nav-btn logout">Выйти</button>
       </nav>
@@ -64,6 +65,7 @@
         <button id="map-search-btn" title="Искать">🔍</button>
       </div>
       <button id="search-here-btn" class="search-here hidden">💩 Отметиться здесь</button>
+      <button id="filter-btn" class="map-tool" title="Фильтр меток">🔧</button>
       <div id="map-hint" class="map-hint hidden">Тут пусто 💨 Жми «+» и поставь первую метку!</div>
       <button id="locate-btn" class="locate-fab" title="Где я"><span class="loc-arrow">➤</span></button>
       <button id="add-poop-btn" class="fab" title="Добавить метку">+</button>
@@ -104,6 +106,23 @@
       <div class="container">
         <h2>Лента 📰</h2>
         <div id="feed-content"></div>
+      </div>
+    </div>
+
+    <!-- Список своих меток -->
+    <div id="list-view" class="view hidden">
+      <div class="container">
+        <h2>Мои метки 🗂</h2>
+        <div class="list-controls">
+          <input type="text" id="list-search" placeholder="Поиск по названию…" />
+          <select id="list-sort">
+            <option value="date_desc">Сначала новые</option>
+            <option value="date_asc">Сначала старые</option>
+            <option value="rating_desc">Оценка ↓</option>
+            <option value="rating_asc">Оценка ↑</option>
+          </select>
+        </div>
+        <div id="list-content"></div>
       </div>
     </div>
   </div>
@@ -155,6 +174,7 @@
       <p id="view-note"></p>
       <div id="view-reactions" class="reactions"></div>
       <div class="modal-actions">
+        <button id="view-route">🧭 Маршрут</button>
         <button id="view-edit" class="hidden">Изменить</button>
         <button id="view-delete" class="danger hidden">Удалить</button>
         <button id="view-close" class="primary">Закрыть</button>
@@ -181,6 +201,30 @@
       <div id="color-grid" class="color-grid"></div>
       <div class="modal-actions">
         <button id="color-close" class="primary">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка фильтра карты -->
+  <div id="filter-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Фильтр меток 🔧</h3>
+      <label>Чьи метки</label>
+      <select id="filter-owner"></select>
+      <label>Минимальная оценка 🚽</label>
+      <select id="filter-rating">
+        <option value="0">Любая</option>
+        <option value="5">5 ⭐</option>
+        <option value="4">4+ ⭐</option>
+        <option value="3">3+ ⭐</option>
+        <option value="2">2+ ⭐</option>
+        <option value="1">1+ ⭐</option>
+      </select>
+      <label>Формат</label>
+      <select id="filter-process"></select>
+      <div class="modal-actions">
+        <button id="filter-reset">Сбросить</button>
+        <button id="filter-apply" class="primary">Применить</button>
       </div>
     </div>
   </div>

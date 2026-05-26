@@ -522,6 +522,10 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
     bottom: calc(90px + env(safe-area-inset-bottom));
     right: 20px;
   }
+  .map-tool {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    left: 18px;
+  }
 
   /* Тост не залезает под полоску */
   .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
@@ -618,6 +622,37 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
 
 /* === КАПЧА В ФОРМЕ РЕГИСТРАЦИИ === */
 .h-captcha { margin: 12px 0; display: flex; justify-content: center; }
+
+/* === ФИЛЬТР КАРТЫ + СПИСОК === */
+.map-tool {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+  font-size: 18px;
+}
+.map-tool.active { outline: 3px solid var(--brown); }
+.list-controls { display: flex; gap: 8px; margin: 8px 0 12px; }
+.list-controls input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 15px; }
+.list-controls select { padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 14px; }
+.list-item {
+  background: var(--card, #fff);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+.list-item:hover { background: rgba(0,0,0,0.04); }
+.list-main { font-size: 15px; font-weight: 600; }
+.list-meta { font-size: 13px; color: var(--muted, #777); margin-top: 2px; }
 
 /* === РЕАКЦИИ НА МЕТКИ === */
 .reactions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }

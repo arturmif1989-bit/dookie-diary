@@ -31,6 +31,7 @@ let profileColors = {}; // id -> marker_color
 let editPoopId = null;  // id метки, которую сейчас редактируем (null = новая)
 let viewedPoop = null;  // метка, открытая в окне просмотра
 let foundPlace = null;  // последнее найденное через поиск место {lat, lng, name}
+let mapFilter = { owner: 'all', minRating: 0, process: '' }; // фильтр карты
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -542,10 +543,8 @@ async function loadPoops() {
     Object.assign(profileNames, profilesMap);
   }
 
-  let ownCount = 0;
-  poops.forEach(poop => {
+  poops.filter(matchesFilter).forEach(poop => {
     const isOwn = poop.user_id === currentUser.id;
-    if (isOwn) ownCount++;
     const ownerColor = safeColor(profileColors[poop.user_id]);
     const icon = L.divIcon({
       html: `<div class="poop-pin" style="background:${ownerColor};border-color:${ratingColor(poop.rating)}">💩</div>`,
@@ -561,7 +560,8 @@ async function loadPoops() {
     markers.push(marker);
   });
 
-  $('map-hint').classList.toggle('hidden', ownCount > 0);
+  const myTotal = poops.filter(p => p.user_id === currentUser.id).length;
+  $('map-hint').classList.toggle('hidden', myTotal > 0);
 
   await renderStats(poops.filter(p => p.user_id === currentUser.id));
 }
@@ -641,6 +641,13 @@ function openEditModal(poop) {
 }
 $('view-edit').addEventListener('click', () => openEditModal(viewedPoop));
 
+// «Маршрут» — открыть метку в Яндекс.Картах с маршрутом от текущего места
+$('view-route').addEventListener('click', () => {
+  if (!viewedPoop) return;
+  const url = `https://yandex.ru/maps/?rtext=~${viewedPoop.latitude},${viewedPoop.longitude}&rtt=auto`;
+  window.open(url, '_blank');
+});
+
 $('view-delete').addEventListener('click', async () => {
   if (!editingPoopId) return;
   if (!confirm('Удалить метку?')) return;
@@ -658,9 +665,10 @@ $('tab-map').addEventListener('click', () => switchTab('map'));
 $('tab-friends').addEventListener('click', () => switchTab('friends'));
 $('tab-stats').addEventListener('click', () => switchTab('stats'));
 $('tab-feed').addEventListener('click', () => switchTab('feed'));
+$('tab-list').addEventListener('click', () => switchTab('list'));
 
 function switchTab(name) {
-  ['map', 'friends', 'stats', 'feed'].forEach(t => {
+  ['map', 'friends', 'stats', 'feed', 'list'].forEach(t => {
     $('tab-' + t).classList.toggle('active', t === name);
     $(t + '-view').classList.toggle('hidden', t !== name);
   });
@@ -671,6 +679,92 @@ function switchTab(name) {
   if (name === 'friends') loadFriends();
   if (name === 'stats') renderStats();
   if (name === 'feed') loadFeed();
+  if (name === 'list') loadList();
+}
+
+// === ФИЛЬТР КАРТЫ ===
+function matchesFilter(p) {
+  if (mapFilter.owner === 'mine' && p.user_id !== currentUser.id) return false;
+  if (mapFilter.owner !== 'all' && mapFilter.owner !== 'mine' && p.user_id !== mapFilter.owner) return false;
+  if (mapFilter.minRating && (!p.rating || p.rating < mapFilter.minRating)) return false;
+  if (mapFilter.process && p.process_type !== mapFilter.process) return false;
+  return true;
+}
+
+function openFilterModal() {
+  const others = [...new Set(allPoops.map(p => p.user_id))].filter(id => id !== currentUser.id);
+  let opts = '<option value="all">Все</option><option value="mine">Только мои</option>';
+  others.forEach(id => { opts += `<option value="${id}">@${escapeHtml(profileNames[id] || '?')}</option>`; });
+  $('filter-owner').innerHTML = opts;
+  $('filter-owner').value = mapFilter.owner;
+  $('filter-process').innerHTML = '<option value="">Любой</option>' +
+    PROCESS_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+  $('filter-process').value = mapFilter.process;
+  $('filter-rating').value = String(mapFilter.minRating);
+  show('filter-modal');
+}
+
+function updateFilterBtn() {
+  const active = mapFilter.owner !== 'all' || mapFilter.minRating || mapFilter.process;
+  $('filter-btn').classList.toggle('active', !!active);
+}
+
+$('filter-btn').addEventListener('click', openFilterModal);
+$('filter-apply').addEventListener('click', () => {
+  mapFilter.owner = $('filter-owner').value;
+  mapFilter.minRating = parseInt($('filter-rating').value) || 0;
+  mapFilter.process = $('filter-process').value;
+  hide('filter-modal');
+  updateFilterBtn();
+  loadPoops();
+});
+$('filter-reset').addEventListener('click', () => {
+  mapFilter = { owner: 'all', minRating: 0, process: '' };
+  hide('filter-modal');
+  updateFilterBtn();
+  loadPoops();
+});
+
+// === СПИСОК СВОИХ МЕТОК ===
+$('list-search').addEventListener('input', loadList);
+$('list-sort').addEventListener('change', loadList);
+
+async function loadList() {
+  const container = $('list-content');
+  let mine = allPoops.filter(p => p.user_id === currentUser.id);
+  if (!mine.length) {
+    const { data } = await sb.from('poops').select('*').eq('user_id', currentUser.id);
+    mine = data || [];
+  }
+  const q = $('list-search').value.trim().toLowerCase();
+  if (q) mine = mine.filter(p => (p.place_name || '').toLowerCase().includes(q));
+  const sort = $('list-sort').value;
+  mine = mine.slice().sort((a, b) => {
+    if (sort === 'date_asc') return new Date(a.pooped_at) - new Date(b.pooped_at);
+    if (sort === 'rating_desc') return (b.rating || 0) - (a.rating || 0);
+    if (sort === 'rating_asc') return (a.rating || 0) - (b.rating || 0);
+    return new Date(b.pooped_at) - new Date(a.pooped_at);
+  });
+  if (!mine.length) {
+    container.innerHTML = '<p class="empty">Меток нет. Поставь первую на карте!</p>';
+    return;
+  }
+  container.innerHTML = '';
+  mine.forEach(poop => {
+    const place = poop.place_name ? escapeHtml(poop.place_name) : 'без названия';
+    const stars = poop.rating ? '🚽 ' + '⭐'.repeat(poop.rating) : '';
+    const when = new Date(poop.pooped_at).toLocaleDateString('ru-RU');
+    const proc = poop.process_type ? escapeHtml(poop.process_type) : '';
+    const card = document.createElement('div');
+    card.className = 'list-item';
+    card.innerHTML = `<div class="list-main">📍 ${place}</div><div class="list-meta">${when} · ${stars} ${proc}</div>`;
+    card.addEventListener('click', () => {
+      switchTab('map');
+      if (map) map.setView([poop.latitude, poop.longitude], 16);
+      showPoopDetails(poop, profileNames[poop.user_id] || 'ты', true);
+    });
+    container.appendChild(card);
+  });
 }
 
 // === ЛЕНТА АКТИВНОСТИ (свои + друзей, по RLS) ===
