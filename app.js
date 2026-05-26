@@ -284,6 +284,35 @@ $('pick-on-map').addEventListener('click', () => {
   toast('Нажми на карту, где поставить метку 💩');
 });
 
+// === ПОИСК МЕСТА (OpenStreetMap / Nominatim) ===
+async function searchPlace() {
+  const q = $('map-search-input').value.trim();
+  if (!q) return;
+  const btn = $('map-search-btn');
+  btn.disabled = true;
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru&q=' + encodeURIComponent(q);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (!data || data.length === 0) { toast('Ничего не найдено 🤷', 'error'); return; }
+    const place = data[0];
+    const lat = parseFloat(place.lat), lon = parseFloat(place.lon);
+    if (!isFinite(lat) || !isFinite(lon)) { toast('Ничего не найдено 🤷', 'error'); return; }
+    if (map) map.setView([lat, lon], 16);
+    const name = (place.display_name || q).split(',').slice(0, 2).join(',');
+    toast('📍 ' + name, 'success');
+  } catch (e) {
+    toast('Поиск недоступен, попробуй ещё раз', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('map-search-btn').addEventListener('click', searchPlace);
+$('map-search-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchPlace(); }
+});
+
 function openAddModal() {
   // дата = сейчас
   const now = new Date();
