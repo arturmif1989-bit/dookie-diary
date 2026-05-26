@@ -96,6 +96,7 @@
     <div class="modal-content">
       <h3>Новая метка 💩</h3>
       <p id="location-info" class="location-info"></p>
+      <button type="button" id="pick-on-map" class="link-btn">📍 Указать точнее на карте</button>
 
       <label>Название заведения</label>
       <input type="text" id="poop-place" placeholder="Кафе, ТЦ, дом, лес..." />
@@ -158,6 +159,13 @@
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Баннер установки PWA -->
+  <div id="install-banner" class="install-banner hidden">
+    <span id="install-text">📲 Добавь «Какарту» на телефон</span>
+    <button id="install-btn" class="install-btn">Установить</button>
+    <button id="install-close" class="install-x" aria-label="Закрыть">×</button>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

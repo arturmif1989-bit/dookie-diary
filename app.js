@@ -228,6 +228,34 @@ $('add-poop-btn').addEventListener('click', () => {
     toast('Отменено');
     return;
   }
+  addAtMyLocation();
+});
+
+// Тап «+» → сразу берём текущее место по GPS и открываем окно
+function addAtMyLocation() {
+  if (!navigator.geolocation) {
+    setAddingMode(true);
+    toast('Геолокация недоступна — выбери точку на карте 👇');
+    return;
+  }
+  toast('Определяю место… 📍');
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      pendingLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (map) map.setView([pendingLatLng.lat, pendingLatLng.lng], 16);
+      openAddModal();
+    },
+    () => {
+      setAddingMode(true);
+      toast('Не удалось определить место — выбери точку на карте 👇');
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// «Указать точнее на карте» из окна метки
+$('pick-on-map').addEventListener('click', () => {
+  hide('add-modal');
   setAddingMode(true);
   toast('Нажми на карту, где поставить метку 💩');
 });
@@ -734,4 +762,42 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
+}
+
+// Подсказка «Установить на телефон»
+let deferredInstallPrompt = null;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+function showInstallBanner(text, withButton) {
+  if (isStandalone || localStorage.getItem('installDismissed')) return;
+  const banner = $('install-banner');
+  if (!banner) return;
+  $('install-text').textContent = text;
+  $('install-btn').style.display = withButton ? '' : 'none';
+  banner.classList.remove('hidden');
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner('📲 Добавь «Какарту» на телефон', true);
+});
+
+$('install-btn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  $('install-banner').classList.add('hidden');
+});
+
+$('install-close').addEventListener('click', () => {
+  $('install-banner').classList.add('hidden');
+  localStorage.setItem('installDismissed', '1');
+});
+
+// iOS Safari не даёт кнопку установки — показываем инструкцию
+if (isIOS && !isStandalone) {
+  showInstallBanner('📲 Установить: «Поделиться» → «На экран «Домой»»', false);
 }

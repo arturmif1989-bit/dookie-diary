@@ -574,3 +574,62 @@ body.dark .stat-card .big-num { color: #e8c9a0; }
 
 /* === ОКНО РЕГИСТРАЦИИ === */
 #signup-modal input { margin-bottom: 12px; }
+
+/* === КНОПКА «УТОЧНИТЬ НА КАРТЕ» === */
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--brown);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin: -4px 0 14px;
+  text-decoration: underline;
+}
+body.dark .link-btn { color: #e8c9a0; }
+
+/* === БАННЕР УСТАНОВКИ PWA === */
+.install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  background: var(--brown-dark);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 3500;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+  font-size: 14px;
+}
+
+.install-banner #install-text { flex: 1; }
+
+.install-btn {
+  background: #fff;
+  color: var(--brown-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.install-x {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+@media (min-width: 600px) {
+  .install-banner { left: auto; right: 16px; max-width: 360px; }
+}
