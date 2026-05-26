@@ -382,6 +382,47 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .stat-card .label { color: var(--muted); font-size: 14px; }
 
+/* === ДОСТИЖЕНИЯ === */
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.badge {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.badge .emoji {
+  font-size: 32px;
+  line-height: 1;
+  filter: grayscale(1);
+  opacity: 0.3;
+}
+
+.badge.unlocked { border-color: var(--brown-light); }
+.badge.unlocked .emoji { filter: none; opacity: 1; }
+
+.badge .b-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.badge.unlocked .b-title { color: var(--brown-dark); }
+
+.badge .b-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 /* === TOAST === */
 .toast {
   position: fixed;

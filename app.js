@@ -13,6 +13,7 @@ let selectedRating = 0;
 let editingPoopId = null;
 let addingMode = false;
 let selectedProcess = null;
+let allPoops = [];
 
 // Форматы процесса (можно дополнять)
 const PROCESS_TYPES = [
@@ -239,8 +240,8 @@ $('modal-save').addEventListener('click', async () => {
   }
 
   hide('add-modal');
-  toast('Сохранено 💩', 'success');
   await loadPoops();
+  announceNearby(pendingLatLng);
 });
 
 // Рейтинг
@@ -258,6 +259,45 @@ function updateRatingUI() {
   });
 }
 
+// === БЛИЗКИЕ МЕТКИ ДРУЗЕЙ ===
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function pluralFriends(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'друг';
+  if (m10 >= 2 && m10 <= 4 && !(m100 >= 12 && m100 <= 14)) return 'друга';
+  return 'друзей';
+}
+
+function announceNearby(latlng) {
+  const RADIUS = 300; // метров
+  const near = allPoops.filter(p =>
+    p.user_id !== currentUser.id &&
+    distanceMeters(latlng.lat, latlng.lng, p.latitude, p.longitude) <= RADIUS
+  );
+  if (near.length === 0) {
+    toast('Сохранено 💩 · тут ты первопроходец! 🚩', 'success');
+    return;
+  }
+  const friends = new Set(near.map(p => p.user_id)).size;
+  const rated = near.filter(p => p.rating);
+  const avg = rated.length
+    ? (rated.reduce((a, p) => a + p.rating, 0) / rated.length).toFixed(1)
+    : null;
+  const verb = friends === 1 ? 'отметился' : 'отметились';
+  let msg = `Сохранено 💩 · рядом ${verb} ${friends} ${pluralFriends(friends)}`;
+  if (avg) msg += `, оценка места ${avg}⭐`;
+  toast(msg, 'success');
+}
+
 // === ЗАГРУЗКА МЕТОК ===
 async function loadPoops() {
   markers.forEach(m => map.removeLayer(m));
@@ -272,6 +312,8 @@ async function loadPoops() {
     toast('Ошибка загрузки: ' + error.message, 'error');
     return;
   }
+
+  allPoops = poops;
 
   // Получим профили владельцев
   const userIds = [...new Set(poops.map(p => p.user_id))];
@@ -551,6 +593,56 @@ async function renderStats(myPoopsArg) {
       <div style="font-size: 16px; margin-top: 4px;">${last}</div>
     </div>
   `;
+
+  renderAchievements(myPoops);
+}
+
+// === ДОСТИЖЕНИЯ ===
+const ACHIEVEMENTS = [
+  { emoji: '🥇', title: 'Первый блин', desc: 'Первая метка', test: s => s.total >= 1 },
+  { emoji: '🔟', title: 'Десяточка', desc: '10 меток', test: s => s.total >= 10 },
+  { emoji: '💯', title: 'Сотка', desc: '100 меток', test: s => s.total >= 100 },
+  { emoji: '⭐', title: 'Критик', desc: 'Оценка туалета 5⭐', test: s => s.maxRating >= 5 },
+  { emoji: '🌙', title: 'Полночный экспресс', desc: 'Метка ночью (00–05)', test: s => s.nightOwl },
+  { emoji: '📅', title: 'Постоянство', desc: 'Метки в 7 разных дней', test: s => s.uniqueDays >= 7 },
+  { emoji: '🔥', title: 'Серия', desc: '3 дня подряд', test: s => s.maxStreak >= 3 },
+  { emoji: '🗺️', title: 'Картограф', desc: '5 меток с заведением', test: s => s.withPlace >= 5 },
+  { emoji: '🧪', title: 'Исследователь', desc: '5 разных форматов', test: s => s.distinctProcess >= 5 },
+];
+
+function computeAchStats(myPoops) {
+  const days = [...new Set(myPoops.map(p => p.pooped_at.slice(0, 10)))].sort();
+  let maxStreak = days.length ? 1 : 0, cur = 1;
+  for (let i = 1; i < days.length; i++) {
+    const diff = Math.round((new Date(days[i]) - new Date(days[i - 1])) / 86400000);
+    if (diff === 1) { cur++; maxStreak = Math.max(maxStreak, cur); } else { cur = 1; }
+  }
+  return {
+    total: myPoops.length,
+    maxRating: myPoops.reduce((m, p) => Math.max(m, p.rating || 0), 0),
+    nightOwl: myPoops.some(p => { const h = new Date(p.pooped_at).getHours(); return h >= 0 && h < 5; }),
+    uniqueDays: days.length,
+    maxStreak,
+    withPlace: myPoops.filter(p => p.place_name).length,
+    distinctProcess: new Set(myPoops.filter(p => p.process_type).map(p => p.process_type)).size,
+  };
+}
+
+function renderAchievements(myPoops) {
+  const el = $('achievements');
+  if (!el) return;
+  const s = computeAchStats(myPoops);
+  const unlocked = ACHIEVEMENTS.filter(a => a.test(s)).length;
+  const title = $('ach-title');
+  if (title) title.textContent = `Достижения 🏆 (${unlocked}/${ACHIEVEMENTS.length})`;
+  el.innerHTML = ACHIEVEMENTS.map(a => {
+    const got = a.test(s);
+    return `<div class="badge ${got ? 'unlocked' : ''}">
+        <div class="emoji">${a.emoji}</div>
+        <div class="b-title">${a.title}</div>
+        <div class="b-desc">${a.desc}</div>
+      </div>`;
+  }).join('');
 }
 
 // === ПОДПИСЬ (Borat) ===
