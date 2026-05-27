@@ -160,9 +160,9 @@ function getTileLayer() {
   const dark = document.body.classList.contains('dark');
   return dark
     ? L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, detectRetina: true })
-    : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19, detectRetina: true });
+        attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd', maxZoom: 20, detectRetina: true })
+    : L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd', maxZoom: 20, detectRetina: true });
 }
 
 function applyTheme(dark) {
