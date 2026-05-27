@@ -51,6 +51,7 @@
         <button id="tab-stats" class="nav-btn">Статистика</button>
         <button id="tab-feed" class="nav-btn">Лента</button>
         <button id="tab-list" class="nav-btn">Список</button>
+        <button id="tab-places" class="nav-btn">Места</button>
         <button id="theme-btn" class="nav-btn" title="Сменить тему">🌙</button>
         <button id="logout-btn" class="nav-btn logout">Выйти</button>
       </nav>
@@ -125,6 +126,15 @@
         <div id="list-content"></div>
       </div>
     </div>
+
+    <!-- Места (рейтинг туалетов по меткам друзей) -->
+    <div id="places-view" class="view hidden">
+      <div class="container">
+        <h2>Места 🚽</h2>
+        <p class="muted">Туалеты по оценкам — твоим и друзей</p>
+        <div id="places-content"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Модалка добавления метки -->
@@ -136,6 +146,7 @@
 
       <label>Название заведения</label>
       <input type="text" id="poop-place" placeholder="Кафе, ТЦ, дом, лес..." maxlength="200" />
+      <div id="place-suggest" class="place-suggest"></div>
 
       <label>Дата</label>
       <input type="datetime-local" id="poop-date" />

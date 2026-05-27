@@ -382,7 +382,43 @@ function openAddModal() {
   $('location-info').textContent =
     `📍 ${pendingLatLng.lat.toFixed(5)}, ${pendingLatLng.lng.toFixed(5)}`;
 
+  $('place-suggest').innerHTML = '';
+  loadPlaceSuggestions();
   show('add-modal');
+}
+
+// Подсказки заведений рядом (OSM) — тап подставляет название в метку,
+// чтобы оценки копились по одному и тому же месту (основа для вкладки «Места»)
+async function loadPlaceSuggestions() {
+  const box = $('place-suggest');
+  if (!box || !pendingLatLng) return;
+  const { lat, lng } = pendingLatLng;
+  box.innerHTML = '<span class="muted">Ищу заведения рядом…</span>';
+  const tags = ['amenity', 'shop', 'leisure', 'tourism'];
+  const body = tags.map(k => `node(around:120,${lat},${lng})["name"]["${k}"];way(around:120,${lat},${lng})["name"]["${k}"];`).join('');
+  const q = `[out:json][timeout:20];(${body});out center 40;`;
+  const data = await overpassQuery(q);
+  if (!data) { box.innerHTML = ''; return; }
+  const seen = new Set();
+  const places = [];
+  (data.elements || []).forEach(el => {
+    const nm = el.tags && el.tags.name;
+    if (!nm || seen.has(nm)) return;
+    const plat = el.lat != null ? el.lat : (el.center && el.center.lat);
+    const plng = el.lon != null ? el.lon : (el.center && el.center.lon);
+    if (!isFinite(plat) || !isFinite(plng)) return;
+    seen.add(nm);
+    places.push({ name: nm, dist: distanceMeters(lat, lng, plat, plng) });
+  });
+  places.sort((a, b) => a.dist - b.dist);
+  const top = places.slice(0, 8);
+  if (!top.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<span class="muted">Рядом:</span> ' + top.map(p =>
+    `<button type="button" class="place-chip" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} · ${Math.round(p.dist)}м</button>`
+  ).join('');
+  box.querySelectorAll('.place-chip').forEach(b => {
+    b.addEventListener('click', () => { $('poop-place').value = b.dataset.name; });
+  });
 }
 
 function renderProcessChips() {
@@ -741,6 +777,7 @@ function openEditModal(poop) {
   editPoopId = poop.id;
   $('add-title').textContent = 'Изменить метку ✏️';
   $('pick-on-map').style.display = 'none';
+  $('place-suggest').innerHTML = '';
   show('add-modal');
 }
 $('view-edit').addEventListener('click', () => openEditModal(viewedPoop));
@@ -770,9 +807,10 @@ $('tab-friends').addEventListener('click', () => switchTab('friends'));
 $('tab-stats').addEventListener('click', () => switchTab('stats'));
 $('tab-feed').addEventListener('click', () => switchTab('feed'));
 $('tab-list').addEventListener('click', () => switchTab('list'));
+$('tab-places').addEventListener('click', () => switchTab('places'));
 
 function switchTab(name) {
-  ['map', 'friends', 'stats', 'feed', 'list'].forEach(t => {
+  ['map', 'friends', 'stats', 'feed', 'list', 'places'].forEach(t => {
     $('tab-' + t).classList.toggle('active', t === name);
     $(t + '-view').classList.toggle('hidden', t !== name);
   });
@@ -784,6 +822,67 @@ function switchTab(name) {
   if (name === 'stats') renderStats();
   if (name === 'feed') loadFeed();
   if (name === 'list') loadList();
+  if (name === 'places') loadPlaces();
+}
+
+// === МЕСТА: рейтинг туалетов по меткам (свои + друзей, уже по RLS) ===
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && !(m100 >= 12 && m100 <= 14)) return few;
+  return many;
+}
+
+async function loadPlaces() {
+  const container = $('places-content');
+  let poops = allPoops;
+  if (!poops || !poops.length) {
+    const { data } = await sb.from('poops').select('*');
+    poops = data || [];
+  }
+  // группируем по названию заведения (без названия — пропускаем)
+  const groups = {};
+  poops.forEach(p => {
+    const name = (p.place_name || '').trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    if (!groups[key]) groups[key] = { name, count: 0, ratedSum: 0, ratedN: 0, users: new Set(), lat: p.latitude, lng: p.longitude, last: p.pooped_at };
+    const g = groups[key];
+    g.count++;
+    g.users.add(p.user_id);
+    if (p.rating) { g.ratedSum += p.rating; g.ratedN++; }
+    if (new Date(p.pooped_at) > new Date(g.last)) { g.last = p.pooped_at; g.lat = p.latitude; g.lng = p.longitude; }
+  });
+  const list = Object.values(groups).map(g => ({
+    name: g.name, count: g.count, users: g.users.size,
+    avg: g.ratedN ? g.ratedSum / g.ratedN : null,
+    lat: g.lat, lng: g.lng,
+  }));
+  // сначала с лучшей оценкой, потом по числу меток
+  list.sort((a, b) => (b.avg || 0) - (a.avg || 0) || b.count - a.count);
+
+  if (!list.length) {
+    container.innerHTML = '<p class="empty">Пока нет мест с названием. Ставь метки и указывай заведение (можно тапнуть подсказку рядом) — тут появится рейтинг туалетов!</p>';
+    return;
+  }
+  container.innerHTML = '';
+  list.forEach(pl => {
+    const rating = pl.avg ? '🚽 ' + pl.avg.toFixed(1) : 'без оценки';
+    const card = document.createElement('div');
+    card.className = 'place-card';
+    card.innerHTML = `
+      <div class="place-rank">${pl.avg ? '⭐' : '📍'}</div>
+      <div class="place-info">
+        <div class="place-name">${escapeHtml(pl.name)}</div>
+        <div class="place-meta">${rating} · ${pl.count} ${plural(pl.count, 'метка', 'метки', 'меток')} · ${pl.users} ${plural(pl.users, 'человек', 'человека', 'человек')}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      switchTab('map');
+      if (map) map.setView([pl.lat, pl.lng], 16);
+    });
+    container.appendChild(card);
+  });
 }
 
 // === ФИЛЬТР КАРТЫ ===

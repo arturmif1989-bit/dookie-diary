@@ -694,6 +694,24 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 .list-main { font-size: 15px; font-weight: 600; }
 .list-meta { font-size: 13px; color: var(--muted, #777); margin-top: 2px; }
 
+/* === МЕСТА (рейтинг туалетов) === */
+.place-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.place-card:hover { background: rgba(0,0,0,0.04); }
+.place-rank { font-size: 22px; flex: 0 0 auto; }
+.place-info { flex: 1; min-width: 0; }
+.place-name { font-weight: 600; font-size: 15px; }
+.place-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
 /* === РЕАКЦИИ НА МЕТКИ === */
 .reactions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
 .react-btn {
@@ -862,6 +880,26 @@ body.dark .comment-head b { color: #e8c9a0; }
 
 /* === ОКНО РЕГИСТРАЦИИ === */
 #signup-modal input { margin-bottom: 12px; }
+
+/* === ПОДСКАЗКИ ЗАВЕДЕНИЙ РЯДОМ (при добавлении метки) === */
+.place-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: -4px 0 6px;
+}
+.place-chip {
+  border: 1px solid var(--border);
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+}
+.place-chip:hover { border-color: var(--brown-light); }
+body.dark .place-chip { background: #221a14; }
 
 /* === КНОПКА «УТОЧНИТЬ НА КАРТЕ» === */
 .link-btn {
