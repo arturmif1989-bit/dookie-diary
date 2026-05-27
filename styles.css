@@ -693,6 +693,59 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
   border-color: var(--brown);
 }
 
+/* === КОММЕНТАРИИ ПОД МЕТКАМИ === */
+.comments {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.comment {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.comment-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.comment-head b { color: var(--brown-dark); font-size: 13px; }
+.comment-when { font-size: 12px; }
+.comment-del {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.comment-del:hover { color: var(--danger); }
+.comment-body { font-size: 14px; margin-top: 3px; word-break: break-word; white-space: pre-wrap; }
+body.dark .comment-head b { color: #e8c9a0; }
+
+.comment-add { display: flex; gap: 8px; margin: 6px 0 2px; }
+.comment-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+}
+.comment-add button {
+  flex: 0 0 auto;
+  width: 46px;
+  border: none;
+  border-radius: 10px;
+  background: var(--brown);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.comment-add button:disabled { opacity: 0.5; cursor: default; }
+
 /* === ЛЕНТА АКТИВНОСТИ === */
 .feed-card {
   display: flex;

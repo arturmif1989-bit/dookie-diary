@@ -563,6 +563,7 @@ function showPoopDetails(poop, username, isOwn) {
   $('view-edit').classList.toggle('hidden', !isOwn);
 
   loadReactions(poop.id);
+  loadComments(poop.id);
   show('view-modal');
 }
 
@@ -597,6 +598,63 @@ window.toggleReaction = async function(poopId, emoji) {
   }
   loadReactions(poopId);
 };
+
+// === КОММЕНТАРИИ ПОД МЕТКАМИ ===
+async function loadComments(poopId) {
+  const box = $('view-comments');
+  if (!box) return;
+  box.dataset.poopId = poopId;
+  box.innerHTML = '<p class="muted">Загрузка…</p>';
+  const { data, error } = await sb.from('comments')
+    .select('id, user_id, body, created_at')
+    .eq('poop_id', poopId)
+    .order('created_at', { ascending: true });
+  if (error) { box.innerHTML = `<p class="muted">Ошибка: ${escapeHtml(error.message)}</p>`; return; }
+  const comments = data || [];
+  // подтянем имена авторов, которых ещё не знаем (комментатор может быть не нашим другом)
+  const unknown = [...new Set(comments.map(c => c.user_id))].filter(id => !profileNames[id]);
+  if (unknown.length) {
+    const { data: profs } = await sb.from('profiles').select('id, username').in('id', unknown);
+    (profs || []).forEach(p => { profileNames[p.id] = p.username; });
+  }
+  if (!comments.length) {
+    box.innerHTML = '<p class="muted">Пока нет комментариев — будь первым 💬</p>';
+    return;
+  }
+  box.innerHTML = comments.map(c => {
+    const who = escapeHtml(profileNames[c.user_id] || '?');
+    const mine = c.user_id === currentUser.id;
+    const when = new Date(c.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const del = mine ? `<button class="comment-del" onclick="deleteComment('${c.id}','${poopId}')" title="Удалить">✕</button>` : '';
+    return `<div class="comment"><div class="comment-head"><b>@${who}</b><span class="comment-when">${when}</span>${del}</div><div class="comment-body">${escapeHtml(c.body)}</div></div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendComment() {
+  const box = $('view-comments');
+  const poopId = box && box.dataset.poopId;
+  const input = $('comment-input');
+  const body = input.value.trim();
+  if (!poopId || !body) return;
+  $('comment-send').disabled = true;
+  const { error } = await sb.from('comments').insert({ poop_id: poopId, user_id: currentUser.id, body });
+  $('comment-send').disabled = false;
+  if (error) { toast('Ошибка: ' + error.message, 'error'); return; }
+  input.value = '';
+  loadComments(poopId);
+}
+
+window.deleteComment = async function(id, poopId) {
+  const { error } = await sb.from('comments').delete().eq('id', id);
+  if (error) { toast('Ошибка: ' + error.message, 'error'); return; }
+  loadComments(poopId);
+};
+
+$('comment-send').addEventListener('click', sendComment);
+$('comment-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendComment(); }
+});
 
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
