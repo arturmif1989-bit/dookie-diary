@@ -1049,6 +1049,7 @@ body.dark .comment-head b { color: var(--brown-light); }
   color: var(--text);
 }
 .place-chip:hover { border-color: var(--brown-light); }
+.place-chip.mine { background: var(--brown); color: #fff; border-color: var(--brown); }
 body.dark .place-chip { background: #11201d; }
 
 /* === КНОПКА «УТОЧНИТЬ НА КАРТЕ» === */

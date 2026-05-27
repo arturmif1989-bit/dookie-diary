@@ -415,8 +415,29 @@ $('search-here-btn').addEventListener('click', () => {
   $('poop-place').value = foundPlace.name;
 });
 
+// === КАНОНИЧЕСКИЕ МЕСТА (склейка одинаковых заведений) ===
+let chosenPlaceId = null; // выбранное существующее место для текущей метки
+function normPlace(s) { return (s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
+// находим существующее место рядом с таким же названием — или создаём новое
+async function findOrCreatePlace(name, lat, lng) {
+  const norm = normPlace(name);
+  try {
+    const dd = 0.0018; // ~200 м по широте
+    const { data } = await sb.from('places').select('id, name')
+      .gte('lat', lat - dd).lte('lat', lat + dd).gte('lng', lng - dd).lte('lng', lng + dd).limit(30);
+    const hit = (data || []).find(p => normPlace(p.name) === norm);
+    if (hit) return hit.id;
+    const { data: created, error } = await sb.from('places')
+      .insert({ name: name.slice(0, 200), lat, lng, created_by: currentUser.id })
+      .select('id').single();
+    return (!error && created) ? created.id : null;
+  } catch (e) { return null; }
+}
+
 function openAddModal() {
   editPoopId = null;
+  chosenPlaceId = null;
   removeSearchPin();
   $('add-title').textContent = 'Новая метка 💩';
   $('pick-on-map').style.display = '';
@@ -447,31 +468,50 @@ async function loadPlaceSuggestions() {
   const box = $('place-suggest');
   if (!box || !pendingLatLng) return;
   const { lat, lng } = pendingLatLng;
-  box.innerHTML = '<span class="muted">Ищу заведения рядом…</span>';
+  box.innerHTML = '<span class="muted">Ищу места рядом…</span>';
+
+  // 1) уже существующие канонические места рядом (≈200 м) — тап привязывает к тому же месту
+  let mine = [];
+  try {
+    const dd = 0.0018;
+    const { data } = await sb.from('places').select('id, name, lat, lng')
+      .gte('lat', lat - dd).lte('lat', lat + dd).gte('lng', lng - dd).lte('lng', lng + dd).limit(30);
+    mine = (data || []).map(p => ({ ...p, dist: distanceMeters(lat, lng, p.lat, p.lng) }))
+      .filter(p => p.dist <= 200).sort((a, b) => a.dist - b.dist).slice(0, 6);
+  } catch (e) { /* ignore */ }
+
+  // 2) заведения из OSM (которых ещё нет среди наших мест)
   const tags = ['amenity', 'shop', 'leisure', 'tourism'];
   const body = tags.map(k => `node(around:120,${lat},${lng})["name"]["${k}"];way(around:120,${lat},${lng})["name"]["${k}"];`).join('');
-  const q = `[out:json][timeout:20];(${body});out center 40;`;
-  const data = await overpassQuery(q);
-  if (!data) { box.innerHTML = ''; return; }
-  const seen = new Set();
-  const places = [];
-  (data.elements || []).forEach(el => {
+  const data = await overpassQuery(`[out:json][timeout:20];(${body});out center 40;`);
+  const seen = new Set(mine.map(m => normPlace(m.name)));
+  const osm = [];
+  ((data && data.elements) || []).forEach(el => {
     const nm = el.tags && el.tags.name;
-    if (!nm || seen.has(nm)) return;
+    if (!nm || seen.has(normPlace(nm))) return;
     const plat = el.lat != null ? el.lat : (el.center && el.center.lat);
     const plng = el.lon != null ? el.lon : (el.center && el.center.lon);
     if (!isFinite(plat) || !isFinite(plng)) return;
-    seen.add(nm);
-    places.push({ name: nm, dist: distanceMeters(lat, lng, plat, plng) });
+    seen.add(normPlace(nm));
+    osm.push({ name: nm, dist: distanceMeters(lat, lng, plat, plng) });
   });
-  places.sort((a, b) => a.dist - b.dist);
-  const top = places.slice(0, 8);
-  if (!top.length) { box.innerHTML = ''; return; }
-  box.innerHTML = '<span class="muted">Рядом:</span> ' + top.map(p =>
-    `<button type="button" class="place-chip" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} · ${Math.round(p.dist)}м</button>`
-  ).join('');
+  osm.sort((a, b) => a.dist - b.dist);
+
+  if (!mine.length && !osm.length) { box.innerHTML = ''; return; }
+  let html = '';
+  if (mine.length) {
+    html += '<span class="muted">Твои места:</span> ' + mine.map(p =>
+      `<button type="button" class="place-chip mine" data-place="${p.id}" data-name="${escapeHtml(p.name)}">📍 ${escapeHtml(p.name)}</button>`
+    ).join('') + ' ';
+  }
+  if (osm.length) {
+    html += '<span class="muted">Рядом:</span> ' + osm.slice(0, 8).map(p =>
+      `<button type="button" class="place-chip" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} · ${Math.round(p.dist)}м</button>`
+    ).join('');
+  }
+  box.innerHTML = html;
   box.querySelectorAll('.place-chip').forEach(b => {
-    b.addEventListener('click', () => { $('poop-place').value = b.dataset.name; });
+    b.addEventListener('click', () => { $('poop-place').value = b.dataset.name; chosenPlaceId = b.dataset.place || null; });
   });
 }
 
@@ -492,6 +532,8 @@ function renderProcessChips() {
 }
 
 $('modal-cancel').addEventListener('click', () => hide('add-modal'));
+// если правишь название руками — это уже не привязка к выбранному месту
+$('poop-place').addEventListener('input', () => { chosenPlaceId = null; });
 
 $('modal-save').addEventListener('click', async () => {
   const place = $('poop-place').value.trim();
@@ -505,10 +547,16 @@ $('modal-save').addEventListener('click', async () => {
     return toast('Кривые координаты — выбери место заново', 'error');
   }
 
+  $('modal-save').disabled = true;
+  // склейка: привязываем метку к каноническому месту (выбранному или найденному/созданному по названию)
+  let placeId = chosenPlaceId;
+  if (!placeId && place) placeId = await findOrCreatePlace(place, lat, lng);
+
   const payload = {
     latitude: lat,
     longitude: lng,
     place_name: place || null,
+    place_id: placeId || null,
     note: note || null,
     rating: selectedRating || null,
     process_type: selectedProcess || null,
@@ -970,6 +1018,7 @@ function openEditModal(poop) {
   renderProcessChips();
   $('location-info').textContent = `📍 ${poop.latitude.toFixed(5)}, ${poop.longitude.toFixed(5)}`;
   editPoopId = poop.id;
+  chosenPlaceId = poop.place_id || null;
   $('add-title').textContent = 'Изменить метку ✏️';
   $('pick-on-map').style.display = 'none';
   $('place-suggest').innerHTML = '';
@@ -1037,18 +1086,26 @@ async function loadPlaces() {
     const { data } = await sb.from('poops').select('*');
     poops = data || [];
   }
-  // группируем по названию заведения (без названия — пропускаем)
+  // имена канонических мест (для склейки)
+  const pids = [...new Set(poops.map(p => p.place_id).filter(Boolean))];
+  let placesById = {};
+  if (pids.length) {
+    const { data: pls } = await sb.from('places').select('id, name, lat, lng').in('id', pids);
+    placesById = Object.fromEntries((pls || []).map(p => [p.id, p]));
+  }
+  // группируем по каноническому месту, а если его нет — по названию (старые метки)
   const groups = {};
   poops.forEach(p => {
-    const name = (p.place_name || '').trim();
+    const canon = p.place_id ? placesById[p.place_id] : null;
+    const name = canon ? canon.name : (p.place_name || '').trim();
     if (!name) return;
-    const key = name.toLowerCase();
-    if (!groups[key]) groups[key] = { name, count: 0, ratedSum: 0, ratedN: 0, users: new Set(), lat: p.latitude, lng: p.longitude, last: p.pooped_at };
+    const key = canon ? ('p:' + p.place_id) : ('t:' + name.toLowerCase());
+    if (!groups[key]) groups[key] = { name, count: 0, ratedSum: 0, ratedN: 0, users: new Set(), lat: canon ? canon.lat : p.latitude, lng: canon ? canon.lng : p.longitude, last: p.pooped_at };
     const g = groups[key];
     g.count++;
     g.users.add(p.user_id);
     if (p.rating) { g.ratedSum += p.rating; g.ratedN++; }
-    if (new Date(p.pooped_at) > new Date(g.last)) { g.last = p.pooped_at; g.lat = p.latitude; g.lng = p.longitude; }
+    if (new Date(p.pooped_at) > new Date(g.last)) { g.last = p.pooped_at; if (!canon) { g.lat = p.latitude; g.lng = p.longitude; } }
   });
   const list = Object.values(groups).map(g => ({
     name: g.name, count: g.count, users: g.users.size,
