@@ -1,16 +1,19 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --brown: #6b4423;
-  --brown-light: #8b5a2b;
-  --brown-dark: #4a2e15;
-  --bg: #faf6f1;
+  /* основной цвет (имена оставлены прежними — переопределяем значения) */
+  --brown: #0d9488;        /* глубокий бирюзово-зелёный */
+  --brown-light: #14b8a6;
+  --brown-dark: #0f766e;
+  --accent: #f59e0b;       /* тёплый янтарный акцент */
+  --bg: #f3f6f5;
   --card: #ffffff;
-  --text: #2a1a0a;
-  --muted: #888;
-  --border: #e5dcc9;
-  --danger: #c0392b;
-  --success: #27ae60;
+  --text: #18302c;
+  --muted: #6b7d79;
+  --border: #e1e8e5;
+  --danger: #ef4444;
+  --success: #10b981;
+  --radius: 14px;
 }
 
 html, body {
@@ -33,7 +36,9 @@ html, body {
 
 /* === AUTH === */
 #auth-screen {
-  background: linear-gradient(135deg, #d4a574 0%, #8b5a2b 100%);
+  background:
+    radial-gradient(circle at 18% 16%, rgba(245,158,11,0.28), transparent 38%),
+    linear-gradient(135deg, #14b8a6 0%, #0e7d70 55%, #0f5e57 100%);
   align-items: center;
   justify-content: center;
   padding: 20px;
@@ -160,6 +165,52 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .nav-btn:hover { background: rgba(255,255,255,0.1); }
 .nav-btn.active { background: white; color: var(--brown); }
 .nav-btn.logout { border-color: rgba(255,255,255,0.5); }
+
+/* Кнопки-иконки справа в шапке */
+.header-actions { display: flex; gap: 6px; align-items: center; }
+.icon-btn {
+  position: relative;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  border: none;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.3); }
+.icon-btn .badge-count { position: absolute; top: -5px; right: -5px; margin: 0; }
+
+/* Нижняя панель навигации */
+.bottom-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 14px rgba(0,0,0,0.07);
+  z-index: 1000;
+}
+.bnav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px 2px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  position: relative;
+}
+.bnav-ic { font-size: 21px; line-height: 1; opacity: 0.7; transition: transform 0.12s; }
+.bnav-btn.active { color: var(--brown); }
+.bnav-btn.active .bnav-ic { opacity: 1; transform: translateY(-1px) scale(1.08); }
+.bnav-btn .badge-count { position: absolute; top: 4px; left: 56%; margin: 0; }
 
 /* === VIEW === */
 .view {
@@ -470,7 +521,7 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 /* === TOAST === */
 .toast {
   position: fixed;
-  bottom: 30px;
+  bottom: 84px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--brown-dark);
@@ -549,17 +600,17 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
   }
   #toilet-btn { bottom: calc(72px + env(safe-area-inset-bottom)); }
 
-  /* Тост не залезает под полоску */
-  .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
+  /* Тост над нижней панелью и полоской iPhone */
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
 /* === ТЁМНАЯ ТЕМА === */
 body.dark {
-  --bg: #1c1410;
-  --card: #2a201a;
-  --text: #f0e6da;
-  --muted: #a89a8a;
-  --border: #3a2e24;
+  --bg: #0f1715;
+  --card: #182421;
+  --text: #e7f0ed;
+  --muted: #93a6a1;
+  --border: #2a3a36;
 }
 body.dark .auth-box,
 body.dark .modal-content,
@@ -569,29 +620,33 @@ body.dark .auth-box input:focus,
 body.dark .modal-content input,
 body.dark .modal-content textarea,
 body.dark .process-chips .chip,
-body.dark .search-bar input { background: #221a14; color: var(--text); border-color: var(--border); }
-body.dark .location-info { background: #221a14; }
+body.dark .search-bar input { background: #11201d; color: var(--text); border-color: var(--border); }
+body.dark .location-info { background: #11201d; }
 body.dark .auth-box h2,
 body.dark .container h2,
 body.dark .modal-content h3,
-body.dark .stat-card .big-num { color: #e8c9a0; }
+body.dark .stat-card .big-num { color: var(--brown-light); }
 
 /* Ночная карта CARTO слишком тёмная — подсвечиваем плитки, чтобы были видны улицы.
    Фильтр только на слое плиток: метки (💩, точка «ты здесь») остаются яркими. */
 body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 
-/* === ПИНЫ НА КАРТЕ === */
+/* === ПИНЫ НА КАРТЕ (капля) === */
 .poop-pin {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #fff;
-  border: 3px solid #888;
+  width: 30px;
+  height: 30px;
+  border: 3px solid;            /* цвет = оценка (задаётся inline) */
+  border-radius: 50% 50% 50% 0; /* капля остриём вниз-влево */
+  transform: rotate(-45deg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 1px 5px rgba(0,0,0,0.35);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+.poop-pin span {
+  transform: rotate(45deg);     /* распрямляем эмодзи обратно */
+  font-size: 14px;
+  line-height: 1;
 }
 
 /* === ПИН ТУАЛЕТА (OSM) === */
@@ -773,7 +828,7 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 }
 .comment-del:hover { color: var(--danger); }
 .comment-body { font-size: 14px; margin-top: 3px; word-break: break-word; white-space: pre-wrap; }
-body.dark .comment-head b { color: #e8c9a0; }
+body.dark .comment-head b { color: var(--brown-light); }
 
 .comment-add { display: flex; gap: 8px; margin: 6px 0 2px; }
 .comment-add input {
@@ -932,7 +987,7 @@ body.dark .comment-head b { color: #e8c9a0; }
   color: var(--text);
 }
 .place-chip:hover { border-color: var(--brown-light); }
-body.dark .place-chip { background: #221a14; }
+body.dark .place-chip { background: #11201d; }
 
 /* === КНОПКА «УТОЧНИТЬ НА КАРТЕ» === */
 .link-btn {
@@ -945,14 +1000,14 @@ body.dark .place-chip { background: #221a14; }
   margin: -4px 0 14px;
   text-decoration: underline;
 }
-body.dark .link-btn { color: #e8c9a0; }
+body.dark .link-btn { color: var(--brown-light); }
 
 /* === БАННЕР УСТАНОВКИ PWA === */
 .install-banner {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  bottom: calc(76px + env(safe-area-inset-bottom));
   background: var(--brown-dark);
   color: #fff;
   border-radius: 12px;

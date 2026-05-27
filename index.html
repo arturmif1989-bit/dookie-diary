@@ -6,7 +6,7 @@
   <title>Какарта 💩</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💩</text></svg>" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#6b4423" />
+  <meta name="theme-color" content="#0d9488" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -45,17 +45,11 @@
   <div id="app-screen" class="screen hidden">
     <header>
       <div class="logo">💩 Какарта</div>
-      <nav>
-        <button id="tab-map" class="nav-btn active">Карта</button>
-        <button id="tab-friends" class="nav-btn">Друзья<span id="friends-badge" class="badge-count hidden"></span></button>
-        <button id="tab-stats" class="nav-btn">Статистика</button>
-        <button id="tab-feed" class="nav-btn">Лента</button>
-        <button id="tab-list" class="nav-btn">Список</button>
-        <button id="tab-places" class="nav-btn">Места</button>
-        <button id="notif-btn" class="nav-btn" title="Уведомления">🔔<span id="notif-badge" class="badge-count hidden"></span></button>
-        <button id="theme-btn" class="nav-btn" title="Сменить тему">🌙</button>
-        <button id="logout-btn" class="nav-btn logout">Выйти</button>
-      </nav>
+      <div class="header-actions">
+        <button id="notif-btn" class="icon-btn" title="Уведомления">🔔<span id="notif-badge" class="badge-count hidden"></span></button>
+        <button id="theme-btn" class="icon-btn" title="Сменить тему">🌙</button>
+        <button id="logout-btn" class="icon-btn" title="Выйти">🚪</button>
+      </div>
     </header>
 
     <!-- Карта -->
@@ -96,6 +90,7 @@
       <div class="container">
         <h2>Твоя статистика 💩</h2>
         <button id="color-btn" class="link-btn">🎨 Цвет моей метки</button>
+        <button id="open-list-btn" class="link-btn">🗂 Мои метки списком</button>
         <div id="stats-content"></div>
 
         <h2 id="ach-title">Достижения 🏆</h2>
@@ -136,6 +131,15 @@
         <div id="places-content"></div>
       </div>
     </div>
+
+    <!-- Нижняя навигация -->
+    <nav id="bottom-nav" class="bottom-nav">
+      <button id="tab-map" class="bnav-btn active"><span class="bnav-ic">🗺️</span>Карта</button>
+      <button id="tab-feed" class="bnav-btn"><span class="bnav-ic">📰</span>Лента</button>
+      <button id="tab-places" class="bnav-btn"><span class="bnav-ic">🚽</span>Места</button>
+      <button id="tab-friends" class="bnav-btn"><span class="bnav-ic">👥</span>Друзья<span id="friends-badge" class="badge-count hidden"></span></button>
+      <button id="tab-stats" class="bnav-btn"><span class="bnav-ic">👤</span>Я</button>
+    </nav>
   </div>
 
   <!-- Модалка добавления метки -->

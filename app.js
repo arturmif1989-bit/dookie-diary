@@ -170,7 +170,7 @@ function applyTheme(dark) {
   const tb = $('theme-btn');
   if (tb) tb.textContent = dark ? '☀️' : '🌙';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = dark ? '#1c1410' : '#6b4423';
+  if (meta) meta.content = dark ? '#0f1715' : '#0d9488';
   localStorage.setItem('theme', dark ? 'dark' : 'light');
   if (map && tileLayer) {
     map.removeLayer(tileLayer);
@@ -579,10 +579,10 @@ async function loadPoops() {
     const isOwn = poop.user_id === currentUser.id;
     const ownerColor = safeColor(profileColors[poop.user_id]);
     const icon = L.divIcon({
-      html: `<div class="poop-pin" style="background:${ownerColor};border-color:${ratingColor(poop.rating)}">💩</div>`,
+      html: `<div class="poop-pin" style="background:${ownerColor};border-color:${ratingColor(poop.rating)}"><span>💩</span></div>`,
       className: '',
-      iconSize: [34, 34],
-      iconAnchor: [17, 17]
+      iconSize: [30, 38],
+      iconAnchor: [15, 34]
     });
 
     const marker = L.marker([poop.latitude, poop.longitude], { icon })
@@ -954,9 +954,12 @@ $('tab-places').addEventListener('click', () => switchTab('places'));
 
 function switchTab(name) {
   ['map', 'friends', 'stats', 'feed', 'list', 'places'].forEach(t => {
-    $('tab-' + t).classList.toggle('active', t === name);
+    const tb = $('tab-' + t);
+    if (tb) tb.classList.toggle('active', t === name);
     $(t + '-view').classList.toggle('hidden', t !== name);
   });
+  // «Список» открывается из вкладки «Я» — держим её подсвеченной
+  if (name === 'list') { const s = $('tab-stats'); if (s) s.classList.add('active'); }
   if (name === 'map' && map) {
     setTimeout(() => map.invalidateSize(), 100);
     loadPoops(); // подтягиваем свежие метки (в т.ч. новые метки друзей)
@@ -1422,6 +1425,7 @@ window.pickColor = async function(color) {
 
 $('color-btn').addEventListener('click', openColorModal);
 $('color-close').addEventListener('click', () => hide('color-modal'));
+(function () { const b = $('open-list-btn'); if (b) b.addEventListener('click', () => switchTab('list')); })();
 
 async function loadFriends() {
   // Заявки
