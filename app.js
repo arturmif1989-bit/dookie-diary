@@ -858,18 +858,25 @@ async function findToilets() {
   }
   const c = map.getCenter();
   const lat = c.lat, lng = c.lng;
-  const radius = 2000; // метров вокруг центра карты
-  const q = `[out:json][timeout:25];(node["amenity"="toilets"](around:${radius},${lat},${lng});way["amenity"="toilets"](around:${radius},${lat},${lng}););out center 60;`;
+  const buildQ = (r) => `[out:json][timeout:25];(node["amenity"="toilets"](around:${r},${lat},${lng});way["amenity"="toilets"](around:${r},${lat},${lng}););out center 80;`;
   if (btn) btn.disabled = true;
   toast('Ищу туалеты рядом… 🚽');
-  const data = await overpassQuery(q);
+  let data = await overpassQuery(buildQ(2000));
+  let els = (data && data.elements) || [];
+  let widened = false;
+  // если рядом совсем мало — расширяем радиус (актуально для небольших городов)
+  if (data && els.length < 8) {
+    const d2 = await overpassQuery(buildQ(6000));
+    const els2 = (d2 && d2.elements) || [];
+    if (els2.length > els.length) { data = d2; els = els2; widened = true; }
+  }
   if (btn) btn.disabled = false;
   if (!data) { toast('Поиск туалетов недоступен, попробуй ещё раз', 'error'); return; }
 
   if (!toiletLayer) toiletLayer = L.layerGroup().addTo(map);
   toiletLayer.clearLayers();
   let count = 0;
-  (data.elements || []).forEach(el => {
+  els.forEach(el => {
     const plat = el.lat != null ? el.lat : (el.center && el.center.lat);
     const plng = el.lon != null ? el.lon : (el.center && el.center.lon);
     if (!isFinite(plat) || !isFinite(plng)) return;
@@ -893,7 +900,7 @@ async function findToilets() {
   toiletsShown = true;
   if (btn) btn.classList.add('active');
   if (count === 0) toast('Рядом туалетов в OSM не нашлось 🤷', 'error');
-  else toast(`Нашёл ${count} ${pluralToilets(count)} рядом 🚽`, 'success');
+  else toast(`Нашёл ${count} ${pluralToilets(count)}${widened ? ' (радиус 6 км)' : ' рядом'} 🚽`, 'success');
 }
 
 (function () {
