@@ -600,17 +600,20 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
   }
   #toilet-btn { bottom: calc(72px + env(safe-area-inset-bottom)); }
 
+  /* Кнопки зума карты — ниже строки поиска, чтобы не перекрывались */
+  .leaflet-top.leaflet-left { top: 56px; }
+
   /* Тост над нижней панелью и полоской iPhone */
   .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
 /* === ТЁМНАЯ ТЕМА === */
 body.dark {
-  --bg: #0f1715;
-  --card: #182421;
-  --text: #e7f0ed;
-  --muted: #93a6a1;
-  --border: #2a3a36;
+  --bg: #1a2723;
+  --card: #243430;
+  --text: #eaf2ef;
+  --muted: #a3b3ae;
+  --border: #374a45;
 }
 body.dark .auth-box,
 body.dark .modal-content,
