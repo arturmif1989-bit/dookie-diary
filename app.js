@@ -1028,7 +1028,7 @@ async function refreshToilets(silent) {
     bits.push('~' + dist + ' м');
     const meta = `<br><span class="t-meta">${bits.join(' · ')}</span>`;
     const route = `https://yandex.ru/maps/?rtext=~${plat},${plng}&rtt=pd`;
-    const html = `<b>🚽 ${name}</b>${meta}<br><a href="${route}" target="_blank" rel="noopener">🧭 Маршрут</a>`;
+    const html = `<b>🚽 ${name}</b>${meta}<br><a class="popup-route" href="${route}" target="_blank" rel="noopener">🧭 Маршрут сюда</a>`;
     const icon = L.divIcon({ html: '<div class="toilet-pin">🚽</div>', className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
     toiletLayer.addLayer(L.marker([plat, plng], { icon }).bindPopup(html));
     count++;
