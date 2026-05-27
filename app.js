@@ -817,6 +817,90 @@ $('filter-reset').addEventListener('click', () => {
   loadPoops();
 });
 
+// === ТУАЛЕТЫ РЯДОМ (OpenStreetMap / Overpass) ===
+let toiletLayer = null;
+let toiletsShown = false;
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+
+function pluralToilets(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'туалет';
+  if (m10 >= 2 && m10 <= 4 && !(m100 >= 12 && m100 <= 14)) return 'туалета';
+  return 'туалетов';
+}
+
+async function overpassQuery(q) {
+  for (const url of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(q),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      if (res.ok) return await res.json();
+    } catch (e) { /* пробуем следующий сервер */ }
+  }
+  return null;
+}
+
+async function findToilets() {
+  if (!map) return;
+  const btn = $('toilet-btn');
+  // повторный тап — спрятать
+  if (toiletsShown) {
+    if (toiletLayer) toiletLayer.clearLayers();
+    toiletsShown = false;
+    if (btn) btn.classList.remove('active');
+    return;
+  }
+  const c = map.getCenter();
+  const lat = c.lat, lng = c.lng;
+  const radius = 2000; // метров вокруг центра карты
+  const q = `[out:json][timeout:25];(node["amenity"="toilets"](around:${radius},${lat},${lng});way["amenity"="toilets"](around:${radius},${lat},${lng}););out center 60;`;
+  if (btn) btn.disabled = true;
+  toast('Ищу туалеты рядом… 🚽');
+  const data = await overpassQuery(q);
+  if (btn) btn.disabled = false;
+  if (!data) { toast('Поиск туалетов недоступен, попробуй ещё раз', 'error'); return; }
+
+  if (!toiletLayer) toiletLayer = L.layerGroup().addTo(map);
+  toiletLayer.clearLayers();
+  let count = 0;
+  (data.elements || []).forEach(el => {
+    const plat = el.lat != null ? el.lat : (el.center && el.center.lat);
+    const plng = el.lon != null ? el.lon : (el.center && el.center.lon);
+    if (!isFinite(plat) || !isFinite(plng)) return;
+    const t = el.tags || {};
+    const dist = Math.round(distanceMeters(lat, lng, plat, plng));
+    const name = t.name ? escapeHtml(t.name) : 'Туалет';
+    const bits = [];
+    if (t.fee === 'yes') bits.push('💰 платный');
+    else if (t.fee === 'no') bits.push('🆓 бесплатный');
+    if (t.access === 'customers') bits.push('для клиентов');
+    if (t.wheelchair === 'yes') bits.push('♿');
+    if (t.opening_hours) bits.push('🕒 ' + escapeHtml(t.opening_hours));
+    const meta = bits.length ? `<br><span class="t-meta">${bits.join(' · ')}</span>` : '';
+    const route = `https://yandex.ru/maps/?rtext=~${plat},${plng}&rtt=pd`;
+    const html = `<b>🚽 ${name}</b><br><span class="t-meta">~${dist} м</span>${meta}<br><a href="${route}" target="_blank" rel="noopener">🧭 Маршрут</a>`;
+    const icon = L.divIcon({ html: '<div class="toilet-pin">🚽</div>', className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
+    toiletLayer.addLayer(L.marker([plat, plng], { icon }).bindPopup(html));
+    count++;
+  });
+
+  toiletsShown = true;
+  if (btn) btn.classList.add('active');
+  if (count === 0) toast('Рядом туалетов в OSM не нашлось 🤷', 'error');
+  else toast(`Нашёл ${count} ${pluralToilets(count)} рядом 🚽`, 'success');
+}
+
+(function () {
+  const tb = $('toilet-btn');
+  if (tb) tb.addEventListener('click', findToilets);
+})();
+
 // === СПИСОК СВОИХ МЕТОК ===
 $('list-search').addEventListener('input', loadList);
 $('list-sort').addEventListener('change', loadList);

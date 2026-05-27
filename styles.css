@@ -545,6 +545,7 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
     bottom: calc(20px + env(safe-area-inset-bottom));
     left: 18px;
   }
+  #toilet-btn { bottom: calc(72px + env(safe-area-inset-bottom)); }
 
   /* Тост не залезает под полоску */
   .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
@@ -590,6 +591,21 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
   font-size: 18px;
   box-shadow: 0 1px 5px rgba(0,0,0,0.35);
 }
+
+/* === ПИН ТУАЛЕТА (OSM) === */
+.toilet-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e3f2fd;
+  border: 2px solid #1976d2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.35);
+}
+.t-meta { color: #888; font-size: 12px; }
 
 /* === ПОИСК МЕСТА НА КАРТЕ === */
 .map-search {
@@ -662,6 +678,7 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
   font-size: 18px;
 }
 .map-tool.active { outline: 3px solid var(--brown); }
+#toilet-btn { bottom: 76px; } /* над кнопкой фильтра */
 .list-controls { display: flex; gap: 8px; margin: 8px 0 12px; }
 .list-controls input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 15px; }
 .list-controls select { padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 14px; }
