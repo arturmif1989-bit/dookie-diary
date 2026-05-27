@@ -20,6 +20,7 @@ let profileNames = {}; // id -> username (для просмотра профил
 let profileColors = {}; // id -> marker_color
 let editPoopId = null;  // id метки, которую сейчас редактируем (null = новая)
 let viewedPoop = null;  // метка, открытая в окне просмотра
+let friendStatsUserId = null; // чьи метки показаны в окне статистики друга
 let foundPlace = null;  // последнее найденное через поиск место {lat, lng, name}
 let mapFilter = { owner: 'all', minRating: 0, process: '' }; // фильтр карты
 
@@ -707,6 +708,17 @@ $('comment-input').addEventListener('keydown', (e) => {
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
 
+// «Метки на карте» из окна друга — фильтруем карту по этому другу
+$('friend-stats-show').addEventListener('click', () => {
+  if (!friendStatsUserId) return;
+  const nm = profileNames[friendStatsUserId] || 'друга';
+  mapFilter.owner = friendStatsUserId;
+  updateFilterBtn();
+  hide('friend-stats-modal');
+  switchTab('map');
+  toast('На карте — метки @' + nm + ' 🗺');
+});
+
 // Закрытие окон тапом по тёмной области (кроме форм с вводом — чтобы не терять данные)
 ['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal'].forEach(id => {
   const m = $(id);
@@ -1125,6 +1137,11 @@ async function loadFeed() {
         <div class="feed-date">${when}</div>
       </div>
     `;
+    card.addEventListener('click', () => {
+      switchTab('map');
+      if (map) map.setView([poop.latitude, poop.longitude], 16);
+      showPoopDetails(poop, profileNames[poop.user_id] || '?', mine);
+    });
     container.appendChild(card);
   });
 }
@@ -1223,6 +1240,7 @@ window.removeFriend = async function(friendshipId) {
 
 // Просмотр статистики и достижений друга (данные уже в allPoops по RLS)
 window.showFriendStats = function(userId) {
+  friendStatsUserId = userId;
   const username = profileNames[userId] || '?';
   const poops = allPoops.filter(p => p.user_id === userId);
   const total = poops.length;
