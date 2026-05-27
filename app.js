@@ -237,6 +237,18 @@ function initMap() {
   // прячем кнопку «Отметиться здесь» при ручном перемещении карты
   map.on('dragstart', () => $('search-here-btn').classList.add('hidden'));
 
+  // авто-обновление туалетов при перемещении карты (если режим включён)
+  map.on('moveend', () => {
+    if (!toiletsShown) return;
+    clearTimeout(toiletRefreshTimer);
+    toiletRefreshTimer = setTimeout(() => {
+      if (!toiletsShown) return;
+      // не дёргаем сервер, если центр почти не сдвинулся
+      if (toiletSearchCenter && map.distance(map.getCenter(), toiletSearchCenter) < 600) return;
+      refreshToilets(true);
+    }, 700);
+  });
+
   // Попробуем получить геолокацию пользователя — крупный план улиц
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -820,6 +832,8 @@ $('filter-reset').addEventListener('click', () => {
 // === ТУАЛЕТЫ РЯДОМ (OpenStreetMap / Overpass) ===
 let toiletLayer = null;
 let toiletsShown = false;
+let toiletSearchCenter = null;   // точка последнего поиска
+let toiletRefreshTimer = null;   // дебаунс авто-обновления при перемещении карты
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
@@ -846,16 +860,9 @@ async function overpassQuery(q) {
   return null;
 }
 
-async function findToilets() {
+async function refreshToilets(silent) {
   if (!map) return;
   const btn = $('toilet-btn');
-  // повторный тап — спрятать
-  if (toiletsShown) {
-    if (toiletLayer) toiletLayer.clearLayers();
-    toiletsShown = false;
-    if (btn) btn.classList.remove('active');
-    return;
-  }
   const c = map.getCenter();
   const lat = c.lat, lng = c.lng;
   // источники: общественные туалеты + места с явным туалетом (кафе/ТЦ…) + АЗС
@@ -864,8 +871,8 @@ async function findToilets() {
     const body = TFILTERS.map(f => `node${f}(around:${r},${lat},${lng});way${f}(around:${r},${lat},${lng});`).join('');
     return `[out:json][timeout:25];(${body});out center 80;`;
   };
-  if (btn) btn.disabled = true;
-  toast('Ищу туалеты рядом… 🚽');
+  if (!silent && btn) btn.disabled = true;
+  if (!silent) toast('Ищу туалеты рядом… 🚽');
   let data = await overpassQuery(buildQ(2000));
   let els = (data && data.elements) || [];
   let widened = false;
@@ -875,8 +882,8 @@ async function findToilets() {
     const els2 = (d2 && d2.elements) || [];
     if (els2.length > els.length) { data = d2; els = els2; widened = true; }
   }
-  if (btn) btn.disabled = false;
-  if (!data) { toast('Поиск туалетов недоступен, попробуй ещё раз', 'error'); return; }
+  if (!silent && btn) btn.disabled = false;
+  if (!data) { if (!silent) toast('Поиск туалетов недоступен, попробуй ещё раз', 'error'); return; }
 
   if (!toiletLayer) toiletLayer = L.layerGroup().addTo(map);
   toiletLayer.clearLayers();
@@ -909,9 +916,27 @@ async function findToilets() {
   });
 
   toiletsShown = true;
+  toiletSearchCenter = c;
   if (btn) btn.classList.add('active');
-  if (count === 0) toast('Рядом туалетов в OSM не нашлось 🤷', 'error');
-  else toast(`Нашёл ${count} ${pluralToilets(count)}${widened ? ' (радиус 6 км)' : ' рядом'} 🚽`, 'success');
+  if (!silent) {
+    if (count === 0) toast('Рядом туалетов в OSM не нашлось 🤷', 'error');
+    else toast(`Нашёл ${count} ${pluralToilets(count)}${widened ? ' (радиус 6 км)' : ' рядом'} 🚽`, 'success');
+  }
+}
+
+// тап по 🚽 — включить/выключить режим туалетов
+function findToilets() {
+  if (!map) return;
+  const btn = $('toilet-btn');
+  if (toiletsShown) {
+    if (toiletLayer) toiletLayer.clearLayers();
+    toiletsShown = false;
+    toiletSearchCenter = null;
+    clearTimeout(toiletRefreshTimer);
+    if (btn) btn.classList.remove('active');
+    return;
+  }
+  refreshToilets(false);
 }
 
 (function () {
