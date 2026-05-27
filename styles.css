@@ -1001,6 +1001,23 @@ body.dark .comment-head b { color: var(--brown-light); }
   text-align: center;
 }
 
+/* === ЛИДЕРБОРД === */
+#leaderboard { margin-bottom: 12px; }
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: var(--card);
+}
+.lb-row.me { border-color: var(--brown-light); }
+.lb-rank { font-size: 16px; width: 26px; text-align: center; flex: 0 0 auto; }
+.lb-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-stat { font-size: 13px; color: var(--muted); flex: 0 0 auto; white-space: nowrap; }
+
 /* === СЧЁТЧИК ЗАЯВОК === */
 .badge-count {
   display: inline-block;

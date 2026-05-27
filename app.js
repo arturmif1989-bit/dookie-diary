@@ -1066,7 +1066,7 @@ function switchTab(name) {
     setTimeout(() => map.invalidateSize(), 100);
     loadPoops(); // подтягиваем свежие метки (в т.ч. новые метки друзей)
   }
-  if (name === 'friends') loadFriends();
+  if (name === 'friends') { loadFriends(); loadLeaderboard(); }
   if (name === 'stats') renderStats();
   if (name === 'feed') loadFeed();
   if (name === 'list') loadList();
@@ -1618,6 +1618,29 @@ window.pickColor = async function(color) {
 $('color-btn').addEventListener('click', openColorModal);
 $('color-close').addEventListener('click', () => hide('color-modal'));
 (function () { const b = $('open-list-btn'); if (b) b.addEventListener('click', () => switchTab('list')); })();
+
+// === ЛИДЕРБОРД СРЕДИ ДРУЗЕЙ (из загруженных меток, без новой базы) ===
+function loadLeaderboard() {
+  const el = $('leaderboard');
+  if (!el) return;
+  const byUser = {};
+  (allPoops || []).forEach(p => { (byUser[p.user_id] = byUser[p.user_id] || []).push(p); });
+  const rows = Object.entries(byUser).map(([uid, ps]) => {
+    const rated = ps.filter(p => p.rating);
+    const avg = rated.length ? rated.reduce((a, p) => a + p.rating, 0) / rated.length : null;
+    return { uid, count: ps.length, streak: computeAchStats(ps).currentStreak, avg };
+  }).sort((a, b) => b.count - a.count || b.streak - a.streak);
+  if (!rows.length) { el.innerHTML = '<p class="empty">Пока пусто — отмечайтесь, и появится топ! 💩</p>'; return; }
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = rows.map((r, i) => {
+    const me = r.uid === currentUser.id;
+    const name = escapeHtml(profileNames[r.uid] || (me ? 'ты' : '?'));
+    const rank = medals[i] || (i + 1) + '.';
+    const fire = r.streak >= 2 ? ` · 🔥${r.streak}` : '';
+    const star = r.avg ? ` · 🚽${r.avg.toFixed(1)}` : '';
+    return `<div class="lb-row${me ? ' me' : ''}"><span class="lb-rank">${rank}</span><span class="lb-name">@${name}${me ? ' · ты' : ''}</span><span class="lb-stat">${r.count} 💩${fire}${star}</span></div>`;
+  }).join('');
+}
 
 async function loadFriends() {
   // Заявки
