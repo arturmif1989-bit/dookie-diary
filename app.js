@@ -1530,7 +1530,7 @@ async function renderStats(myPoopsArg) {
     </div>
     <div class="stat-card">
       <div class="label">любимый формат:</div>
-      <div style="font-size: 18px; margin-top: 4px;">${topProcess}</div>
+      <div style="font-size: 18px; margin-top: 4px;">${escapeHtml(topProcess)}</div>
     </div>
     <div class="stat-card">
       <div class="label">последний раз:</div>
