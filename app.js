@@ -1440,6 +1440,7 @@ window.showFriendStats = function(userId) {
   $('friend-stats-body').innerHTML = `
     <div class="stat-card tappable" onclick="showFriendPoopsOnMap()"><div class="big-num">${total}</div><div class="label">меток 💩 · показать на карте 🗺</div></div>
     <div class="stat-card"><div class="big-num">${avg}</div><div class="label">средняя оценка 🚽</div></div>
+    <div class="stat-card"><div class="big-num">🔥 ${s.currentStreak}</div><div class="label">серия (дней подряд)</div></div>
     <div class="stat-card"><div class="big-num">${s.uniqueDays}</div><div class="label">дней активности</div></div>
     <h2 style="margin-top:14px;">Достижения 🏆 (${unlocked}/${ACHIEVEMENTS.length})</h2>
     <div class="achievements">${ACHIEVEMENTS.map(a => {
@@ -1552,6 +1553,7 @@ async function renderStats(myPoopsArg) {
     myPoops = data || [];
   }
 
+  const achS = computeAchStats(myPoops);
   const total = myPoops.length;
   const avgRating = myPoops.filter(p => p.rating).length > 0
     ? (myPoops.filter(p => p.rating).reduce((a, p) => a + p.rating, 0) /
@@ -1576,6 +1578,10 @@ async function renderStats(myPoopsArg) {
       <div class="label">всего меток 💩</div>
     </div>
     <div class="stat-card">
+      <div class="big-num">🔥 ${achS.currentStreak}</div>
+      <div class="label">дней подряд (серия)</div>
+    </div>
+    <div class="stat-card">
       <div class="big-num">${avgRating}</div>
       <div class="label">средняя оценка туалета 🚽</div>
     </div>
@@ -1598,15 +1604,21 @@ async function renderStats(myPoopsArg) {
 
 // === ДОСТИЖЕНИЯ ===
 const ACHIEVEMENTS = [
-  { emoji: '🥇', title: 'Первый блин', desc: 'Первая метка', test: s => s.total >= 1 },
-  { emoji: '🔟', title: 'Десяточка', desc: '10 меток', test: s => s.total >= 10 },
-  { emoji: '💯', title: 'Сотка', desc: '100 меток', test: s => s.total >= 100 },
-  { emoji: '⭐', title: 'Критик', desc: 'Оценка туалета 5⭐', test: s => s.maxRating >= 5 },
+  { emoji: '🥇', title: 'Первый блин', desc: 'Первая метка', test: s => s.total >= 1, prog: s => [s.total, 1] },
+  { emoji: '🔟', title: 'Десяточка', desc: '10 меток', test: s => s.total >= 10, prog: s => [s.total, 10] },
+  { emoji: '💯', title: 'Сотка', desc: '100 меток', test: s => s.total >= 100, prog: s => [s.total, 100] },
+  { emoji: '👑', title: 'Король горшка', desc: '500 меток', test: s => s.total >= 500, prog: s => [s.total, 500] },
+  { emoji: '🔥', title: 'Серия', desc: '3 дня подряд', test: s => s.maxStreak >= 3, prog: s => [s.maxStreak, 3] },
+  { emoji: '🗓️', title: 'Неделя силы', desc: '7 дней подряд', test: s => s.maxStreak >= 7, prog: s => [s.maxStreak, 7] },
+  { emoji: '🏔️', title: 'Железный месяц', desc: '30 дней подряд', test: s => s.maxStreak >= 30, prog: s => [s.maxStreak, 30] },
+  { emoji: '📅', title: 'Постоянство', desc: 'Метки в 7 разных дней', test: s => s.uniqueDays >= 7, prog: s => [s.uniqueDays, 7] },
+  { emoji: '⚡', title: 'Турбо-день', desc: '3 метки за один день', test: s => s.maxPerDay >= 3, prog: s => [s.maxPerDay, 3] },
+  { emoji: '⭐', title: 'Критик', desc: 'Оценка туалета на 5⭐', test: s => s.maxRating >= 5 },
   { emoji: '🌙', title: 'Полночный экспресс', desc: 'Метка ночью (00–05)', test: s => s.nightOwl },
-  { emoji: '📅', title: 'Постоянство', desc: 'Метки в 7 разных дней', test: s => s.uniqueDays >= 7 },
-  { emoji: '🔥', title: 'Серия', desc: '3 дня подряд', test: s => s.maxStreak >= 3 },
-  { emoji: '🗺️', title: 'Картограф', desc: '5 меток с заведением', test: s => s.withPlace >= 5 },
-  { emoji: '🧪', title: 'Исследователь', desc: '5 разных форматов', test: s => s.distinctProcess >= 5 },
+  { emoji: '🌅', title: 'Жаворонок', desc: 'Метка на рассвете (5–8)', test: s => s.earlyBird },
+  { emoji: '🗺️', title: 'Картограф', desc: '5 меток с заведением', test: s => s.withPlace >= 5, prog: s => [s.withPlace, 5] },
+  { emoji: '🏙️', title: 'Путешественник', desc: '5 разных мест', test: s => s.distinctPlaces >= 5, prog: s => [s.distinctPlaces, 5] },
+  { emoji: '🧪', title: 'Исследователь', desc: '5 разных форматов', test: s => s.distinctProcess >= 5, prog: s => [s.distinctProcess, 5] },
 ];
 
 function computeAchStats(myPoops) {
@@ -1616,13 +1628,33 @@ function computeAchStats(myPoops) {
     const diff = Math.round((new Date(days[i]) - new Date(days[i - 1])) / 86400000);
     if (diff === 1) { cur++; maxStreak = Math.max(maxStreak, cur); } else { cur = 1; }
   }
+  // текущая серия: считаем назад от последнего дня, если он сегодня или вчера
+  let currentStreak = 0;
+  if (days.length) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const last = new Date(days[days.length - 1]); last.setHours(0, 0, 0, 0);
+    if (Math.round((today - last) / 86400000) <= 1) {
+      currentStreak = 1;
+      for (let i = days.length - 1; i > 0; i--) {
+        const diff = Math.round((new Date(days[i]) - new Date(days[i - 1])) / 86400000);
+        if (diff === 1) currentStreak++; else break;
+      }
+    }
+  }
+  const perDay = {};
+  myPoops.forEach(p => { const d = p.pooped_at.slice(0, 10); perDay[d] = (perDay[d] || 0) + 1; });
+  const maxPerDay = Object.values(perDay).reduce((m, n) => Math.max(m, n), 0);
   return {
     total: myPoops.length,
     maxRating: myPoops.reduce((m, p) => Math.max(m, p.rating || 0), 0),
     nightOwl: myPoops.some(p => { const h = new Date(p.pooped_at).getHours(); return h >= 0 && h < 5; }),
+    earlyBird: myPoops.some(p => { const h = new Date(p.pooped_at).getHours(); return h >= 5 && h < 8; }),
     uniqueDays: days.length,
     maxStreak,
+    currentStreak,
+    maxPerDay,
     withPlace: myPoops.filter(p => p.place_name).length,
+    distinctPlaces: new Set(myPoops.filter(p => p.place_name).map(p => p.place_name.trim().toLowerCase())).size,
     distinctProcess: new Set(myPoops.filter(p => p.process_type).map(p => p.process_type)).size,
   };
 }
@@ -1636,10 +1668,17 @@ function renderAchievements(myPoops) {
   if (title) title.textContent = `Достижения 🏆 (${unlocked}/${ACHIEVEMENTS.length})`;
   el.innerHTML = ACHIEVEMENTS.map(a => {
     const got = a.test(s);
+    let bar = '';
+    if (!got && a.prog) {
+      const [c, t] = a.prog(s);
+      const pct = Math.max(0, Math.min(100, Math.round((c / t) * 100)));
+      bar = `<div class="b-prog"><div class="b-prog-fill" style="width:${pct}%"></div></div><div class="b-prog-txt">${Math.min(c, t)}/${t}</div>`;
+    }
     return `<div class="badge ${got ? 'unlocked' : ''}">
         <div class="emoji">${a.emoji}</div>
         <div class="b-title">${a.title}</div>
         <div class="b-desc">${a.desc}</div>
+        ${bar}
       </div>`;
   }).join('');
 }

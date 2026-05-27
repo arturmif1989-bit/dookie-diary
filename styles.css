@@ -518,6 +518,17 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
   margin-top: 2px;
 }
 
+/* прогресс к следующей ачивке */
+.b-prog {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  margin: 8px 6px 0;
+  overflow: hidden;
+}
+.b-prog-fill { height: 100%; background: var(--brown-light); }
+.b-prog-txt { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
 /* === TOAST === */
 .toast {
   position: fixed;
