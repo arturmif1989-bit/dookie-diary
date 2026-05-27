@@ -945,12 +945,11 @@ $('view-delete').addEventListener('click', async () => {
 });
 
 // === ВКЛАДКИ ===
-$('tab-map').addEventListener('click', () => switchTab('map'));
-$('tab-friends').addEventListener('click', () => switchTab('friends'));
-$('tab-stats').addEventListener('click', () => switchTab('stats'));
-$('tab-feed').addEventListener('click', () => switchTab('feed'));
-$('tab-list').addEventListener('click', () => switchTab('list'));
-$('tab-places').addEventListener('click', () => switchTab('places'));
+// привязываем вкладки безопасно (кнопки, которых нет — пропускаем, чтобы не падал весь скрипт)
+['map', 'friends', 'stats', 'feed', 'places'].forEach((name) => {
+  const b = $('tab-' + name);
+  if (b) b.addEventListener('click', () => switchTab(name));
+});
 
 function switchTab(name) {
   ['map', 'friends', 'stats', 'feed', 'list', 'places'].forEach(t => {
