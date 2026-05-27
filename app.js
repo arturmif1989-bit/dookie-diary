@@ -858,14 +858,19 @@ async function findToilets() {
   }
   const c = map.getCenter();
   const lat = c.lat, lng = c.lng;
-  const buildQ = (r) => `[out:json][timeout:25];(node["amenity"="toilets"](around:${r},${lat},${lng});way["amenity"="toilets"](around:${r},${lat},${lng}););out center 80;`;
+  // источники: общественные туалеты + места с явным туалетом (кафе/ТЦ…) + АЗС
+  const TFILTERS = ['["amenity"="toilets"]', '["toilets"="yes"]', '["amenity"="fuel"]'];
+  const buildQ = (r) => {
+    const body = TFILTERS.map(f => `node${f}(around:${r},${lat},${lng});way${f}(around:${r},${lat},${lng});`).join('');
+    return `[out:json][timeout:25];(${body});out center 80;`;
+  };
   if (btn) btn.disabled = true;
   toast('Ищу туалеты рядом… 🚽');
   let data = await overpassQuery(buildQ(2000));
   let els = (data && data.elements) || [];
   let widened = false;
-  // если рядом совсем мало — расширяем радиус (актуально для небольших городов)
-  if (data && els.length < 8) {
+  // если рядом мало — расширяем радиус (актуально для небольших городов)
+  if (data && els.length < 10) {
     const d2 = await overpassQuery(buildQ(6000));
     const els2 = (d2 && d2.elements) || [];
     if (els2.length > els.length) { data = d2; els = els2; widened = true; }
@@ -882,16 +887,22 @@ async function findToilets() {
     if (!isFinite(plat) || !isFinite(plng)) return;
     const t = el.tags || {};
     const dist = Math.round(distanceMeters(lat, lng, plat, plng));
-    const name = t.name ? escapeHtml(t.name) : 'Туалет';
+    const dedicated = t.amenity === 'toilets';
+    const kindMap = { cafe: 'Кафе', restaurant: 'Ресторан', fast_food: 'Фастфуд', bar: 'Бар', pub: 'Паб', fuel: 'АЗС' };
+    const shopMap = { mall: 'ТЦ', supermarket: 'Супермаркет', department_store: 'Универмаг' };
+    const kind = dedicated ? 'Общественный туалет' : (kindMap[t.amenity] || shopMap[t.shop] || 'Есть туалет');
+    const name = t.name ? escapeHtml(t.name) : (dedicated ? 'Туалет' : kind);
     const bits = [];
+    if (!dedicated) bits.push(kind === 'Есть туалет' ? 'есть туалет' : (kind + ' · есть туалет'));
     if (t.fee === 'yes') bits.push('💰 платный');
     else if (t.fee === 'no') bits.push('🆓 бесплатный');
     if (t.access === 'customers') bits.push('для клиентов');
     if (t.wheelchair === 'yes') bits.push('♿');
     if (t.opening_hours) bits.push('🕒 ' + escapeHtml(t.opening_hours));
-    const meta = bits.length ? `<br><span class="t-meta">${bits.join(' · ')}</span>` : '';
+    bits.push('~' + dist + ' м');
+    const meta = `<br><span class="t-meta">${bits.join(' · ')}</span>`;
     const route = `https://yandex.ru/maps/?rtext=~${plat},${plng}&rtt=pd`;
-    const html = `<b>🚽 ${name}</b><br><span class="t-meta">~${dist} м</span>${meta}<br><a href="${route}" target="_blank" rel="noopener">🧭 Маршрут</a>`;
+    const html = `<b>🚽 ${name}</b>${meta}<br><a href="${route}" target="_blank" rel="noopener">🧭 Маршрут</a>`;
     const icon = L.divIcon({ html: '<div class="toilet-pin">🚽</div>', className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
     toiletLayer.addLayer(L.marker([plat, plng], { icon }).bindPopup(html));
     count++;
