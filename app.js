@@ -1,5 +1,7 @@
 // === КОНФИГ ===
-const SUPABASE_URL = 'https://sohronolnipgtvjycfcz.supabase.co';
+// База проксируется через свой домен (kakarta.ru/sb → Supabase), чтобы обходить
+// блокировки *.supabase.co у мобильных операторов РФ (см. vercel.json).
+const SUPABASE_URL = location.origin + '/sb';
 const SUPABASE_KEY = 'sb_publishable_fBP0vhadJASnTV91WTOuBQ_Bwfm6AEz';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
