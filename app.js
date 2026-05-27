@@ -153,6 +153,7 @@ async function enterApp() {
   await loadPoops();
   updateFriendsBadge();
   refreshNotifications();
+  loadFavorites();
 }
 
 // === ТЕМА / ЭФФЕКТЫ / УТИЛИТЫ ===
@@ -587,6 +588,7 @@ $('modal-save').addEventListener('click', async () => {
   }
   await loadPoops();
   if (!wasEdit) announceNearby(pendingLatLng);
+  if (!wasEdit && placeId) maybeOfferFavorite(placeId);
 });
 
 // Рейтинг
@@ -829,7 +831,7 @@ window.showFriendPoopsOnMap = function() {
 };
 
 // Закрытие окон тапом по тёмной области (кроме форм с вводом — чтобы не терять данные)
-['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'notif-modal'].forEach(id => {
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'notif-modal', 'fav-modal'].forEach(id => {
   const m = $(id);
   if (m) m.addEventListener('click', (e) => { if (e.target === m) hide(id); });
 });
@@ -877,7 +879,7 @@ function enableSwipeClose(modalId) {
   content.addEventListener('touchcancel', finish);
 }
 
-['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'add-modal', 'signup-modal', 'notif-modal']
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'add-modal', 'signup-modal', 'notif-modal', 'fav-modal']
   .forEach(enableSwipeClose);
 
 // === УВЕДОМЛЕНИЯ (колокольчик в приложении) ===
@@ -1100,7 +1102,7 @@ async function loadPlaces() {
     const name = canon ? canon.name : (p.place_name || '').trim();
     if (!name) return;
     const key = canon ? ('p:' + p.place_id) : ('t:' + name.toLowerCase());
-    if (!groups[key]) groups[key] = { name, count: 0, ratedSum: 0, ratedN: 0, users: new Set(), lat: canon ? canon.lat : p.latitude, lng: canon ? canon.lng : p.longitude, last: p.pooped_at };
+    if (!groups[key]) groups[key] = { name, placeId: canon ? p.place_id : null, count: 0, ratedSum: 0, ratedN: 0, users: new Set(), lat: canon ? canon.lat : p.latitude, lng: canon ? canon.lng : p.longitude, last: p.pooped_at };
     const g = groups[key];
     g.count++;
     g.users.add(p.user_id);
@@ -1108,7 +1110,7 @@ async function loadPlaces() {
     if (new Date(p.pooped_at) > new Date(g.last)) { g.last = p.pooped_at; if (!canon) { g.lat = p.latitude; g.lng = p.longitude; } }
   });
   const list = Object.values(groups).map(g => ({
-    name: g.name, count: g.count, users: g.users.size,
+    name: g.name, placeId: g.placeId, count: g.count, users: g.users.size,
     avg: g.ratedN ? g.ratedSum / g.ratedN : null,
     lat: g.lat, lng: g.lng,
   }));
@@ -1122,14 +1124,16 @@ async function loadPlaces() {
   container.innerHTML = '';
   list.forEach(pl => {
     const rating = pl.avg ? '🚽 ' + pl.avg.toFixed(1) : 'без оценки';
+    const favStar = pl.placeId ? `<button class="place-fav${favPlaceIds.has(pl.placeId) ? ' on' : ''}" onclick="event.stopPropagation(); toggleFavorite('${pl.placeId}')" title="В любимые">${favPlaceIds.has(pl.placeId) ? '⭐' : '☆'}</button>` : '';
     const card = document.createElement('div');
     card.className = 'place-card';
     card.innerHTML = `
-      <div class="place-rank">${pl.avg ? '⭐' : '📍'}</div>
+      <div class="place-rank">${pl.avg ? '🚽' : '📍'}</div>
       <div class="place-info">
         <div class="place-name">${escapeHtml(pl.name)}</div>
         <div class="place-meta">${rating} · ${pl.count} ${plural(pl.count, 'метка', 'метки', 'меток')} · ${pl.users} ${plural(pl.users, 'человек', 'человека', 'человек')}</div>
       </div>
+      ${favStar}
     `;
     card.addEventListener('click', () => {
       switchTab('map');
@@ -1295,6 +1299,85 @@ function findToilets() {
 (function () {
   const tb = $('toilet-btn');
   if (tb) tb.addEventListener('click', findToilets);
+})();
+
+// === ЛЮБИМЫЕ МЕСТА + БЫСТРЫЙ ЧЕК-ИН ===
+let favPlaceIds = new Set();
+
+async function loadFavorites() {
+  if (!currentUser) return;
+  const { data } = await sb.from('favorites').select('place_id').eq('user_id', currentUser.id);
+  favPlaceIds = new Set((data || []).map(f => f.place_id));
+}
+
+async function addFavorite(placeId) {
+  if (!placeId || favPlaceIds.has(placeId)) return;
+  const { error } = await sb.from('favorites').insert({ user_id: currentUser.id, place_id: placeId });
+  if (!error) { favPlaceIds.add(placeId); toast('Добавлено в любимые ⭐', 'success'); }
+}
+
+window.toggleFavorite = async function(placeId) {
+  if (!placeId) return;
+  if (favPlaceIds.has(placeId)) {
+    await sb.from('favorites').delete().eq('user_id', currentUser.id).eq('place_id', placeId);
+    favPlaceIds.delete(placeId);
+    toast('Убрано из любимых');
+  } else {
+    const { error } = await sb.from('favorites').insert({ user_id: currentUser.id, place_id: placeId });
+    if (error) { toast('Ошибка: ' + error.message, 'error'); return; }
+    favPlaceIds.add(placeId);
+    toast('В любимые ⭐', 'success');
+  }
+  if (!$('fav-modal').classList.contains('hidden')) openFavModal();
+  if (!$('places-view').classList.contains('hidden')) loadPlaces();
+};
+
+// при повторном визите в место предлагаем добавить его в любимые
+function maybeOfferFavorite(placeId) {
+  if (!placeId || favPlaceIds.has(placeId)) return;
+  const mine = (allPoops || []).filter(p => p.user_id === currentUser.id && p.place_id === placeId).length;
+  if (mine < 2) return;
+  if (confirm('Ты тут уже не первый раз 👀\nДобавить место в любимые — чек-ин будет в один тап?')) addFavorite(placeId);
+}
+
+async function openFavModal() {
+  const box = $('fav-content');
+  box.innerHTML = '<p class="muted">Загрузка…</p>';
+  show('fav-modal');
+  const { data } = await sb.from('favorites')
+    .select('place_id, places(name, lat, lng)')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: true });
+  const favs = (data || []).filter(f => f.places);
+  favPlaceIds = new Set(favs.map(f => f.place_id));
+  if (!favs.length) {
+    box.innerHTML = '<p class="empty">Любимых пока нет. Отметься у места дважды — предложу добавить, или жми ☆ во вкладке «Места».</p>';
+    return;
+  }
+  box.innerHTML = favs.map(f =>
+    `<div class="fav-item"><div class="fav-name">⭐ ${escapeHtml(f.places.name)}</div><div class="fav-actions"><button class="fav-go" onclick="quickCheckIn('${f.place_id}')">💩 я тут</button><button class="fav-del" onclick="toggleFavorite('${f.place_id}')" title="Убрать">✕</button></div></div>`
+  ).join('');
+}
+
+window.quickCheckIn = async function(placeId) {
+  const { data: pl } = await sb.from('places').select('name, lat, lng').eq('id', placeId).single();
+  if (!pl) { toast('Место не найдено', 'error'); return; }
+  const { error } = await sb.from('poops').insert({
+    user_id: currentUser.id, latitude: pl.lat, longitude: pl.lng,
+    place_name: pl.name, place_id: placeId, pooped_at: new Date().toISOString()
+  });
+  if (error) { toast('Ошибка: ' + error.message, 'error'); return; }
+  hide('fav-modal');
+  poopConfetti();
+  toast('Отметился: ' + pl.name + ' 💩', 'success');
+  await loadPoops();
+};
+
+(function () {
+  const fb = $('fav-btn');
+  if (fb) fb.addEventListener('click', openFavModal);
+  const fc = $('fav-close');
+  if (fc) fc.addEventListener('click', () => hide('fav-modal'));
 })();
 
 // === СПИСОК СВОИХ МЕТОК ===

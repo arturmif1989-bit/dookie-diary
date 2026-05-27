@@ -610,6 +610,7 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
     left: 18px;
   }
   #toilet-btn { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  #fav-btn { bottom: calc(124px + env(safe-area-inset-bottom)); }
 
   /* Кнопки зума карты — ниже строки поиска, чтобы не перекрывались */
   .leaflet-top.leaflet-left { top: 56px; }
@@ -811,6 +812,7 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 }
 .map-tool.active { outline: 3px solid var(--brown); }
 #toilet-btn { bottom: 76px; } /* над кнопкой фильтра */
+#fav-btn { bottom: 128px; }   /* над кнопкой туалетов */
 .list-controls { display: flex; gap: 8px; margin: 8px 0 12px; }
 .list-controls input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 15px; }
 .list-controls select { padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 14px; }
@@ -843,6 +845,16 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 .place-info { flex: 1; min-width: 0; }
 .place-name { font-weight: 600; font-size: 15px; }
 .place-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.place-fav { background: none; border: none; font-size: 20px; cursor: pointer; flex: 0 0 auto; padding: 4px; line-height: 1; }
+
+/* === ЛЮБИМЫЕ МЕСТА === */
+.fav-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.fav-item:last-child { border-bottom: none; }
+.fav-name { flex: 1; min-width: 0; font-weight: 600; }
+.fav-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.fav-go { background: var(--brown); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.fav-del { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 6px; }
+.fav-del:hover { color: var(--danger); }
 
 /* === РЕАКЦИИ НА МЕТКИ === */
 .reactions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }

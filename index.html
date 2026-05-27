@@ -63,6 +63,7 @@
       <button id="search-here-btn" class="search-here hidden">💩 Отметиться здесь</button>
       <button id="filter-btn" class="map-tool" title="Фильтр меток">🔧</button>
       <button id="toilet-btn" class="map-tool" title="Туалеты рядом">🚽</button>
+      <button id="fav-btn" class="map-tool" title="Любимые места">⭐</button>
       <div id="map-hint" class="map-hint hidden">Тут пусто 💨 Жми «+» и поставь первую метку!</div>
       <button id="locate-btn" class="locate-fab" title="Где я"><span class="loc-arrow">➤</span></button>
       <button id="add-poop-btn" class="fab" title="Добавить метку">+</button>
@@ -272,6 +273,18 @@
       <div id="notif-content"></div>
       <div class="modal-actions">
         <button id="notif-close" class="primary">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка любимых мест -->
+  <div id="fav-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Любимые места ⭐</h3>
+      <p class="muted">Чек-ин в один тап — жми «я тут».</p>
+      <div id="fav-content"></div>
+      <div class="modal-actions">
+        <button id="fav-close" class="primary">Закрыть</button>
       </div>
     </div>
   </div>
