@@ -708,16 +708,24 @@ $('comment-input').addEventListener('keydown', (e) => {
 $('view-close').addEventListener('click', () => hide('view-modal'));
 $('friend-stats-close').addEventListener('click', () => hide('friend-stats-modal'));
 
-// «Метки на карте» из окна друга — фильтруем карту по этому другу
-$('friend-stats-show').addEventListener('click', () => {
+// Тап по блоку «N меток» в окне друга — показываем все его метки на карте
+window.showFriendPoopsOnMap = function() {
   if (!friendStatsUserId) return;
-  const nm = profileNames[friendStatsUserId] || 'друга';
-  mapFilter.owner = friendStatsUserId;
+  const uid = friendStatsUserId;
+  const nm = profileNames[uid] || 'друга';
+  mapFilter.owner = uid;
   updateFilterBtn();
   hide('friend-stats-modal');
   switchTab('map');
   toast('На карте — метки @' + nm + ' 🗺');
-});
+  // подгоняем карту под его метки (после того как вкладка карты показана и размер пересчитан)
+  const theirs = (allPoops || []).filter(p => p.user_id === uid);
+  if (theirs.length) {
+    setTimeout(() => {
+      if (map) map.fitBounds(theirs.map(p => [p.latitude, p.longitude]), { padding: [50, 50], maxZoom: 16 });
+    }, 250);
+  }
+};
 
 // Закрытие окон тапом по тёмной области (кроме форм с вводом — чтобы не терять данные)
 ['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal'].forEach(id => {
@@ -1253,7 +1261,7 @@ window.showFriendStats = function(userId) {
 
   $('friend-stats-title').textContent = '@' + username;
   $('friend-stats-body').innerHTML = `
-    <div class="stat-card"><div class="big-num">${total}</div><div class="label">меток 💩</div></div>
+    <div class="stat-card tappable" onclick="showFriendPoopsOnMap()"><div class="big-num">${total}</div><div class="label">меток 💩 · показать на карте 🗺</div></div>
     <div class="stat-card"><div class="big-num">${avg}</div><div class="label">средняя оценка 🚽</div></div>
     <div class="stat-card"><div class="big-num">${s.uniqueDays}</div><div class="label">дней активности</div></div>
     <h2 style="margin-top:14px;">Достижения 🏆 (${unlocked}/${ACHIEVEMENTS.length})</h2>

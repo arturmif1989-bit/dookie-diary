@@ -423,6 +423,8 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 }
 
 .stat-card .label { color: var(--muted); font-size: 14px; }
+.stat-card.tappable { cursor: pointer; transition: border-color 0.1s; }
+.stat-card.tappable:hover { border-color: var(--brown-light); }
 
 /* === ДОСТИЖЕНИЯ === */
 .achievements {
