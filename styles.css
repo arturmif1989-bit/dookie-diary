@@ -792,8 +792,6 @@ body.dark .leaflet-tile-pane { filter: brightness(1.7) contrast(1.05); }
 }
 .search-pin span { transform: rotate(45deg); font-size: 15px; line-height: 1; }
 
-/* === КАПЧА В ФОРМЕ РЕГИСТРАЦИИ === */
-.h-captcha { margin: 12px 0; display: flex; justify-content: center; }
 
 /* === ФИЛЬТР КАРТЫ + СПИСОК === */
 .map-tool {
