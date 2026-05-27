@@ -1871,6 +1871,23 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Авто-обновление: если на сервере появилась новая версия app.js — мягко перезагружаемся,
+// чтобы пользователь не залипал на старом закэшированном коде.
+(function () {
+  let baseLen = null, last = 0;
+  async function checkUpdate() {
+    if (Date.now() - last < 60000) return;
+    last = Date.now();
+    try {
+      const txt = await (await fetch('app.js', { cache: 'no-store' })).text();
+      if (baseLen === null) baseLen = txt.length;
+      else if (txt.length !== baseLen) location.reload();
+    } catch (e) { /* офлайн — ничего не делаем */ }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+  setTimeout(checkUpdate, 4000);
+})();
+
 // Подсказка «Установить на телефон»
 let deferredInstallPrompt = null;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
