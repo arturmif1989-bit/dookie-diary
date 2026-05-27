@@ -889,6 +889,22 @@ body.dark .comment-head b { color: #e8c9a0; }
   vertical-align: middle;
 }
 
+/* === УВЕДОМЛЕНИЯ (колокольчик) === */
+#notif-content { max-height: 60vh; overflow-y: auto; }
+.notif-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+.notif-item.clickable { cursor: pointer; }
+.notif-item.clickable:hover { background: rgba(0,0,0,0.04); }
+.notif-item.unseen { border-left-color: var(--brown-light); background: rgba(45,154,134,0.08); }
+.notif-text { font-size: 14px; }
+.notif-when { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
 /* === АНИМАЦИИ === */
 .modal:not(.hidden) .modal-content { animation: modal-in 0.22s ease; }
 @keyframes modal-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }

@@ -52,6 +52,7 @@
         <button id="tab-feed" class="nav-btn">Лента</button>
         <button id="tab-list" class="nav-btn">Список</button>
         <button id="tab-places" class="nav-btn">Места</button>
+        <button id="notif-btn" class="nav-btn" title="Уведомления">🔔<span id="notif-badge" class="badge-count hidden"></span></button>
         <button id="theme-btn" class="nav-btn" title="Сменить тему">🌙</button>
         <button id="logout-btn" class="nav-btn logout">Выйти</button>
       </nav>
@@ -255,6 +256,17 @@
       <div class="modal-actions">
         <button id="show-signin">Уже есть аккаунт</button>
         <button id="signup-btn" class="primary">Создать аккаунт</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка уведомлений -->
+  <div id="notif-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Уведомления 🔔</h3>
+      <div id="notif-content"></div>
+      <div class="modal-actions">
+        <button id="notif-close" class="primary">Закрыть</button>
       </div>
     </div>
   </div>

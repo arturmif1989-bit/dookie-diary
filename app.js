@@ -152,6 +152,7 @@ async function enterApp() {
   initMap();
   await loadPoops();
   updateFriendsBadge();
+  refreshNotifications();
 }
 
 // === ТЕМА / ЭФФЕКТЫ / УТИЛИТЫ ===
@@ -728,7 +729,7 @@ window.showFriendPoopsOnMap = function() {
 };
 
 // Закрытие окон тапом по тёмной области (кроме форм с вводом — чтобы не терять данные)
-['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal'].forEach(id => {
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'notif-modal'].forEach(id => {
   const m = $(id);
   if (m) m.addEventListener('click', (e) => { if (e.target === m) hide(id); });
 });
@@ -776,8 +777,130 @@ function enableSwipeClose(modalId) {
   content.addEventListener('touchcancel', finish);
 }
 
-['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'add-modal', 'signup-modal']
+['view-modal', 'filter-modal', 'color-modal', 'friend-stats-modal', 'add-modal', 'signup-modal', 'notif-modal']
   .forEach(enableSwipeClose);
+
+// === УВЕДОМЛЕНИЯ (колокольчик в приложении) ===
+// Без пушей: при заходе/возврате в приложение считаем новые события — реакции и
+// комментарии на ТВОИ метки + заявки в друзья. «Прочитано» хранится в localStorage.
+let notifications = [];
+
+function notifLastSeen() { return Number(localStorage.getItem('notifLastSeen') || 0); }
+
+async function refreshNotifications() {
+  if (!currentUser) return;
+  const myIds = (allPoops || []).filter(p => p.user_id === currentUser.id).map(p => p.id);
+  const poopById = {};
+  (allPoops || []).forEach(p => { poopById[p.id] = p; });
+
+  const { data: reqs } = await sb.from('friendships')
+    .select('requester_id, created_at')
+    .eq('addressee_id', currentUser.id).eq('status', 'pending');
+
+  let reacts = [], comms = [];
+  if (myIds.length) {
+    const r = await sb.from('reactions')
+      .select('poop_id, user_id, emoji, created_at')
+      .in('poop_id', myIds).neq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }).limit(30);
+    const c = await sb.from('comments')
+      .select('poop_id, user_id, body, created_at')
+      .in('poop_id', myIds).neq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }).limit(30);
+    reacts = r.data || [];
+    comms = c.data || [];
+  }
+
+  // подтянем имена авторов, которых ещё не знаем
+  const need = [...new Set([
+    ...(reqs || []).map(x => x.requester_id),
+    ...reacts.map(x => x.user_id),
+    ...comms.map(x => x.user_id),
+  ])].filter(id => !profileNames[id]);
+  if (need.length) {
+    const { data: profs } = await sb.from('profiles').select('id, username').in('id', need);
+    (profs || []).forEach(p => { profileNames[p.id] = p.username; });
+  }
+
+  const items = [];
+  (reqs || []).forEach(f => items.push({
+    time: new Date(f.created_at).getTime(),
+    text: `👋 @${profileNames[f.requester_id] || 'кто-то'} хочет в друзья`,
+    go: () => switchTab('friends'),
+  }));
+  reacts.forEach(r => {
+    const p = poopById[r.poop_id];
+    const where = p && p.place_name ? ` «${p.place_name}»` : '';
+    items.push({
+      time: new Date(r.created_at).getTime(),
+      text: `${r.emoji} @${profileNames[r.user_id] || 'кто-то'} — реакция на твою метку${where}`,
+      go: p ? () => openPoopFromNotif(p) : null,
+    });
+  });
+  comms.forEach(c => {
+    const p = poopById[c.poop_id];
+    items.push({
+      time: new Date(c.created_at).getTime(),
+      text: `💬 @${profileNames[c.user_id] || 'кто-то'}: ${c.body}`,
+      go: p ? () => openPoopFromNotif(p) : null,
+    });
+  });
+  items.sort((a, b) => b.time - a.time);
+  notifications = items.slice(0, 25);
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const b = $('notif-badge');
+  if (!b) return;
+  const seen = notifLastSeen();
+  const n = notifications.filter(x => x.time > seen).length;
+  if (n > 0) { b.textContent = n > 9 ? '9+' : String(n); b.classList.remove('hidden'); }
+  else b.classList.add('hidden');
+}
+
+function openPoopFromNotif(poop) {
+  switchTab('map');
+  if (map) map.setView([poop.latitude, poop.longitude], 16);
+  showPoopDetails(poop, profileNames[poop.user_id] || 'ты', poop.user_id === currentUser.id);
+}
+
+function openNotifModal() {
+  const box = $('notif-content');
+  if (!notifications.length) {
+    box.innerHTML = '<p class="empty">Пока тихо 🤫 Ни реакций, ни комментов, ни заявок.</p>';
+  } else {
+    const seen = notifLastSeen();
+    box.innerHTML = '';
+    notifications.forEach(x => {
+      const el = document.createElement('div');
+      el.className = 'notif-item' + (x.time > seen ? ' unseen' : '');
+      const when = new Date(x.time).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      el.innerHTML = `<div class="notif-text"></div><div class="notif-when">${when}</div>`;
+      el.querySelector('.notif-text').textContent = x.text; // textContent — без риска XSS
+      if (x.go) { el.classList.add('clickable'); el.addEventListener('click', () => { hide('notif-modal'); x.go(); }); }
+      box.appendChild(el);
+    });
+  }
+  show('notif-modal');
+  localStorage.setItem('notifLastSeen', String(Date.now()));
+  updateNotifBadge();
+}
+
+(function () {
+  const nb = $('notif-btn');
+  if (nb) nb.addEventListener('click', openNotifModal);
+  const nc = $('notif-close');
+  if (nc) nc.addEventListener('click', () => hide('notif-modal'));
+})();
+
+// обновляем колокольчик при возврате в приложение и раз в ~90 сек, пока оно открыто
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshNotifications();
+});
+setInterval(() => {
+  if (document.visibilityState === 'visible' && currentUser) refreshNotifications();
+}, 90000);
 
 // Открыть метку на редактирование (своя метка)
 function openEditModal(poop) {
