@@ -237,7 +237,7 @@ function initMap() {
   });
 
   // прячем кнопку «Отметиться здесь» при ручном перемещении карты
-  map.on('dragstart', () => $('search-here-btn').classList.add('hidden'));
+  map.on('dragstart', () => { hideSearchResults(); if (!searchPin) $('search-here-btn').classList.add('hidden'); });
 
   // авто-обновление туалетов при перемещении карты (если режим включён)
   map.on('moveend', () => {
@@ -307,29 +307,78 @@ $('pick-on-map').addEventListener('click', () => {
 });
 
 // === ПОИСК МЕСТА (OpenStreetMap / Nominatim) ===
+let searchPin = null; // перетаскиваемая метка-«иголочка» после поиска
+
 async function searchPlace() {
   const q = $('map-search-input').value.trim();
   if (!q) return;
   const btn = $('map-search-btn');
   btn.disabled = true;
   try {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru&q=' + encodeURIComponent(q);
+    // приоритет тому, что сейчас видно на карте (viewbox) + русские названия + несколько вариантов
+    let bias = '';
+    if (map) {
+      const b = map.getBounds();
+      bias = `&viewbox=${b.getWest().toFixed(5)},${b.getNorth().toFixed(5)},${b.getEast().toFixed(5)},${b.getSouth().toFixed(5)}`;
+    }
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=1&accept-language=ru&q=${encodeURIComponent(q)}${bias}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
-    if (!data || data.length === 0) { toast('Ничего не найдено 🤷', 'error'); return; }
-    const place = data[0];
-    const lat = parseFloat(place.lat), lon = parseFloat(place.lon);
-    if (!isFinite(lat) || !isFinite(lon)) { toast('Ничего не найдено 🤷', 'error'); return; }
-    if (map) map.setView([lat, lon], 16);
-    const name = (place.display_name || q).split(',').slice(0, 2).join(',');
-    foundPlace = { lat, lng: lon, name };
-    $('search-here-btn').classList.remove('hidden');
-    toast('📍 ' + name, 'success');
+    if (!data || data.length === 0) { toast('Ничего не найдено 🤷', 'error'); hideSearchResults(); return; }
+    renderSearchResults(data);
   } catch (e) {
     toast('Поиск недоступен, попробуй ещё раз', 'error');
   } finally {
     btn.disabled = false;
   }
+}
+
+function renderSearchResults(items) {
+  const box = $('search-results-list');
+  if (!box) return;
+  box.innerHTML = items.map((it, i) => {
+    const main = it.name || (it.display_name || '').split(',')[0] || '?';
+    const sub = (it.display_name || '').split(',').slice(1, 3).join(',').trim();
+    return `<button type="button" class="sr-item" data-i="${i}"><span class="sr-main">${escapeHtml(main)}</span>${sub ? `<span class="sr-sub">${escapeHtml(sub)}</span>` : ''}</button>`;
+  }).join('');
+  box.querySelectorAll('.sr-item').forEach(b => {
+    b.addEventListener('click', () => pickSearchResult(items[parseInt(b.dataset.i)]));
+  });
+  box.classList.remove('hidden');
+}
+
+function hideSearchResults() {
+  const box = $('search-results-list');
+  if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+}
+
+function pickSearchResult(it) {
+  if (!it) return;
+  const lat = parseFloat(it.lat), lon = parseFloat(it.lon);
+  if (!isFinite(lat) || !isFinite(lon)) { toast('Не получилось открыть это место', 'error'); return; }
+  const name = (it.name || (it.display_name || '').split(',')[0] || '').trim();
+  foundPlace = { lat, lng: lon, name };
+  hideSearchResults();
+  if (map) map.setView([lat, lon], 17);
+  dropSearchPin(lat, lon);
+  $('search-here-btn').classList.remove('hidden');
+  toast('📍 ' + name + ' · перетащи 💩 точнее', 'success');
+}
+
+// «иголочка» с какашкой — её можно перетащить пальцем для точного места
+function dropSearchPin(lat, lng) {
+  if (!map) return;
+  if (searchPin) { searchPin.setLatLng([lat, lng]); return; }
+  const icon = L.divIcon({ html: '<div class="search-pin"><span>💩</span></div>', className: '', iconSize: [34, 44], iconAnchor: [17, 42] });
+  searchPin = L.marker([lat, lng], { icon, draggable: true, zIndexOffset: 3000 }).addTo(map);
+  searchPin.on('dragend', () => {
+    const ll = searchPin.getLatLng();
+    if (foundPlace) { foundPlace.lat = ll.lat; foundPlace.lng = ll.lng; }
+  });
+}
+
+function removeSearchPin() {
+  if (searchPin && map) { map.removeLayer(searchPin); searchPin = null; }
 }
 
 $('map-search-btn').addEventListener('click', searchPlace);
@@ -358,14 +407,17 @@ $('locate-btn').addEventListener('click', () => {
 // «Отметиться здесь» — ставим метку в найденном месте, имя подставляем
 $('search-here-btn').addEventListener('click', () => {
   if (!foundPlace) return;
+  if (searchPin) { const ll = searchPin.getLatLng(); foundPlace.lat = ll.lat; foundPlace.lng = ll.lng; }
   pendingLatLng = { lat: foundPlace.lat, lng: foundPlace.lng };
   $('search-here-btn').classList.add('hidden');
+  removeSearchPin();
   openAddModal();
   $('poop-place').value = foundPlace.name;
 });
 
 function openAddModal() {
   editPoopId = null;
+  removeSearchPin();
   $('add-title').textContent = 'Новая метка 💩';
   $('pick-on-map').style.display = '';
   // дата = сейчас
